@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>取件宝 — 审美方向</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #E4E6EB;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; padding: 40px; gap: 40px; flex-wrap: wrap;
+  }
+
+  .direction {
+    width: 420px; background: #fff; border-radius: 24px;
+    overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+  }
+  .dir-header {
+    padding: 32px 32px 20px;
+  }
+  .dir-header h2 {
+    font-size: 24px; font-weight: 700; letter-spacing: -0.5px;
+    margin-bottom: 6px;
+  }
+  .dir-header p {
+    font-size: 14px; color: #999; line-height: 1.6;
+  }
+
+  /* ---- 色板 ---- */
+  .swatches {
+    display: flex; gap: 0; padding: 0 32px 28px;
+    flex-wrap: wrap;
+  }
+  .swatch {
+    width: 48px; height: 48px; border-radius: 12px;
+    position: relative; flex-shrink: 0;
+  }
+
+  /* ---- 卡片区 ---- */
+  .demo-area {
+    margin: 0 28px 28px; padding: 28px 20px;
+    border-radius: 20px;
+  }
+  .demo-label {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.06em; margin-bottom: 20px;
+  }
+  .demo-card {
+    border-radius: 16px; padding: 20px; margin-bottom: 12px;
+  }
+  .demo-card-top {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 16px;
+  }
+  .demo-badge {
+    width: 34px; height: 34px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .demo-info { flex: 1; }
+  .demo-company { font-size: 15px; font-weight: 600; }
+  .demo-time { font-size: 12px; margin-top: 2px; }
+  .demo-code-row { display: flex; align-items: baseline; gap: 8px; }
+  .demo-code-label { font-size: 11px; font-weight: 500; }
+  .demo-code {
+    font-family: "SF Mono", "JetBrains Mono", monospace;
+    font-size: 24px; font-weight: 700; letter-spacing: 0.04em;
+  }
+  .demo-addr { font-size: 13px; margin-top: 6px; }
+
+  /* ---- 注释 ---- */
+  .notes {
+    padding: 0 32px 32px; font-size: 12px; line-height: 1.8;
+  }
+</style>
+</head>
+<body>
+
+<!-- ======================================== -->
+<!-- 方向 A: 冷雾 Frost                          -->
+<!-- ======================================== -->
+<div class="direction">
+  <div class="dir-header">
+    <h2 style="color:#1D1F23;">Frost · 冷雾</h2>
+    <p>冷白底 + 蓝灰阶 + 单一靛蓝强调。北欧画廊感，清冽克制。颜色几乎无声，唯一强调色锋利精准。</p>
+  </div>
+
+  <!-- 色板 -->
+  <div class="swatches">
+    <div class="swatch" style="background:#F6F7F9;" title="Page bg"></div>
+    <div class="swatch" style="background:#FFFFFF;border:1px solid #E8EBF0;" title="Card"></div>
+    <div class="swatch" style="background:#1D1F23;" title="Text"></div>
+    <div class="swatch" style="background:#90949C;" title="Secondary"></div>
+    <div class="swatch" style="background:#C0C4CC;" title="Tertiary"></div>
+    <div class="swatch" style="background:#E8EBF0;" title="Border"></div>
+    <div class="swatch" style="background:#4F5EF7;" title="Accent"></div>
+    <div class="swatch" style="background:#F0F1F5;" title="Input bg"></div>
+  </div>
+
+  <!-- 卡片演示 -->
+  <div class="demo-area" style="background:#F6F7F9;">
+    <div class="demo-label" style="color:#B0B4BC;">cards</div>
+
+    <!-- 折叠卡片 -->
+    <div class="demo-card" style="background:#FFFFFF;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <div class="demo-card-top">
+        <div class="demo-badge" style="background:#E8734A;">顺</div>
+        <div class="demo-info">
+          <div class="demo-company" style="color:#1D1F23;">顺丰速运</div>
+          <div class="demo-time" style="color:#B0B4BC;">2 小时前</div>
+        </div>
+      </div>
+      <div class="demo-code-row">
+        <span class="demo-code-label" style="color:#B0B4BC;">取件码</span>
+        <span class="demo-code" style="color:#4F5EF7;">3-2-1088</span>
+      </div>
+      <div class="demo-addr" style="color:#90949C;">菜鸟驿站(阳光花园店)</div>
+    </div>
+
+    <!-- 展开卡片 -->
+    <div class="demo-card" style="background:#FFFFFF;box-shadow:0 4px 16px rgba(0,0,0,0.06);border-left:3px solid #4F5EF7;">
+      <div class="demo-card-top">
+        <div class="demo-badge" style="background:#FF6B35;">极</div>
+        <div class="demo-info">
+          <div class="demo-company" style="color:#1D1F23;">极兔速递</div>
+          <div class="demo-time" style="color:#B0B4BC;">5 小时前</div>
+        </div>
+      </div>
+      <div class="demo-code-row">
+        <span class="demo-code-label" style="color:#B0B4BC;">柜号</span>
+        <span class="demo-code" style="color:#4F5EF7;">丰巢柜 A-12</span>
+      </div>
+      <div class="demo-addr" style="color:#90949C;">丰巢快递柜(小区东门)</div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid #E8EBF0;">
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;padding:3px 0;">
+          <span style="width:48px;text-align:right;font-size:11px;color:#B0B4BC;">单号</span>
+          <span style="color:#1D1F23;">SF1234567890123</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;padding:3px 0;">
+          <span style="width:48px;text-align:right;font-size:11px;color:#B0B4BC;">电话</span>
+          <span style="color:#1D1F23;">138****1234</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 已取件 -->
+    <div class="demo-card" style="background:#FFFFFF;box-shadow:0 1px 3px rgba(0,0,0,0.04);opacity:0.5;">
+      <div class="demo-card-top">
+        <div class="demo-badge" style="background:#E8734A;">顺</div>
+        <div class="demo-info">
+          <div class="demo-company" style="color:#1D1F23;">顺丰速运 &nbsp;<span style="font-size:12px;color:#8CA88C;">✓ 已取件</span></div>
+          <div class="demo-time" style="color:#B0B4BC;">昨天</div>
+        </div>
+      </div>
+      <div class="demo-code-row">
+        <span class="demo-code-label" style="color:#B0B4BC;">取件码</span>
+        <span class="demo-code" style="color:#90949C;">8-3-1024</span>
+      </div>
+      <div class="demo-addr" style="color:#90949C;">京东便利店(万达店)</div>
+    </div>
+  </div>
+
+  <div class="notes" style="color:#999;">
+    <strong style="color:#4F5EF7;">关键特征：</strong>靛蓝单强调 · 只有取件码带色 · 其余全是灰度 · 冷白底 · 阴影极淡 · 靠留白和大小分层 · 已取件降透明度不换色
+  </div>
+</div>
+
+<!-- ======================================== -->
+<!-- 方向 B: 石墨 Graphite                      -->
+<!-- ======================================== -->
+<div class="direction">
+  <div class="dir-header">
+    <h2 style="color:#1A1A1A;">Graphite · 石墨</h2>
+    <p>深灰底 + 鼠尾灰阶 + 单一青绿强调。沉稳、有重量感。像高端文具品牌，不轻浮不幼稚。</p>
+  </div>
+
+  <!-- 色板 -->
+  <div class="swatches">
+    <div class="swatch" style="background:#EEEEEC;" title="Page bg"></div>
+    <div class="swatch" style="background:#FFFFFF;border:1px solid #E0E0DE;" title="Card"></div>
+    <div class="swatch" style="background:#1A1A1A;" title="Text"></div>
+    <div class="swatch" style="background:#888886;" title="Secondary"></div>
+    <div class="swatch" style="background:#B8B8B5;" title="Tertiary"></div>
+    <div class="swatch" style="background:#E0E0DE;" title="Border"></div>
+    <div class="swatch" style="background:#2C8C7A;" title="Accent"></div>
+    <div class="swatch" style="background:#F4F4F2;" title="Input bg"></div>
+  </div>
+
+  <!-- 卡片演示 -->
+  <div class="demo-area" style="background:#EEEEEC;">
+    <div class="demo-label" style="color:#AAA;">cards</div>
+
+    <div class="demo-card" style="background:#FFFFFF;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
+      <div class="demo-card-top">
+        <div class="demo-badge" style="background:#E8734A;">顺</div>
+        <div class="demo-info">
+          <div class="demo-company" style="color:#1A1A1A;">顺丰速运</div>
+          <div class="demo-time" style="color:#B8B8B5;">2 小时前</div>
+        </div>
+      </div>
+      <div class="demo-code-row">
+        <span class="demo-code-label" style="color:#B8B8B5;">取件码</span>
+        <span class="demo-code" style="color:#2C8C7A;">3-2-1088</span>
+      </div>
+      <div class="demo-addr" style="color:#888886;">菜鸟驿站(阳光花园店)</div>
+    </div>
+
+    <div class="demo-card" style="background:#FFFFFF;box-shadow:0 4px 16px rgba(0,0,0,0.06);border-left:3px solid #2C8C7A;">
+      <div class="demo-card-top">
+        <div class="demo-badge" style="background:#FF6B35;">极</div>
+        <div class="demo-info">
+          <div class="demo-company" style="color:#1A1A1A;">极兔速递</div>
+          <div class="demo-time" style="color:#B8B8B5;">5 小时前</div>
+        </div>
+      </div>
+      <div class="demo-code-row">
+        <span class="demo-code-label" style="color:#B8B8B5;">柜号</span>
+        <span class="demo-code" style="color:#2C8C7A;">丰巢柜 A-12</span>
+      </div>
+      <div class="demo-addr" style="color:#888886;">丰巢快递柜(小区东门)</div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid #E0E0DE;">
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;padding:3px 0;">
+          <span style="width:48px;text-align:right;font-size:11px;color:#B8B8B5;">单号</span>
+          <span style="color:#1A1A1A;">SF1234567890123</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;padding:3px 0;">
+          <span style="width:48px;text-align:right;font-size:11px;color:#B8B8B5;">电话</span>
+          <span style="color:#1A1A1A;">138****1234</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-card" style="background:#FFFFFF;box-shadow:0 1px 4px rgba(0,0,0,0.05);opacity:0.5;">
+      <div class="demo-card-top">
+        <div class="demo-badge" style="background:#E8734A;">顺</div>
+        <div class="demo-info">
+          <div class="demo-company" style="color:#1A1A1A;">顺丰速运 &nbsp;<span style="font-size:12px;color:#8CA88C;">✓ 已取件</span></div>
+          <div class="demo-time" style="color:#B8B8B5;">昨天</div>
+        </div>
+      </div>
+      <div class="demo-code-row">
+        <span class="demo-code-label" style="color:#B8B8B5;">取件码</span>
+        <span class="demo-code" style="color:#888886;">8-3-1024</span>
+      </div>
+      <div class="demo-addr" style="color:#888886;">京东便利店(万达店)</div>
+    </div>
+  </div>
+
+  <div class="notes" style="color:#999;">
+    <strong style="color:#2C8C7A;">关键特征：</strong>青绿单强调 · 暖灰底调 · 有质感和重量 · 像 MUJI/高端文具 · 配色安静不发飘 · 取件码用青绿突出
+  </div>
+</div>
+
+</body>
+</html>
