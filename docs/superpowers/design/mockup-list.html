@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>取件宝 — 快递列表</title>
+<style>
+  :root {
+    --bg: #FAF6F0;
+    --card: #FFFFFF;
+    --card-done: #EDEAE4;
+    --accent: #C4693B;
+    --text: #2C2218;
+    --text-secondary: #8C8278;
+    --divider: #E8E4DD;
+    --green: #6B9E6F;
+    --orange: #E0A15E;
+    --sf: #E85D3A;
+    --jd: #D4232E;
+    --jt: #FF6B35;
+    --shadow: 0 1px 3px rgba(44,34,24,0.06);
+    --shadow-lg: 0 4px 12px rgba(44,34,24,0.08);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #E8E4DD;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  .phone-frame {
+    width: 390px;
+    min-height: 844px;
+    background: var(--bg);
+    border-radius: 40px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    position: relative;
+  }
+  .status-bar {
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--bg);
+  }
+  .header {
+    padding: 12px 20px 16px;
+  }
+  .header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.5px;
+  }
+  .header .subtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+  .quick-actions {
+    display: flex;
+    gap: 10px;
+    padding: 0 20px 16px;
+  }
+  .quick-btn {
+    flex: 1;
+    padding: 10px 0;
+    border-radius: 24px;
+    border: 1.5px solid var(--divider);
+    background: var(--card);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  .quick-btn:active { background: var(--divider); }
+  .quick-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .quick-btn.primary:active { opacity: 0.85; }
+
+  .list-area { padding: 0 16px 100px; }
+
+  .day-group { margin-bottom: 24px; }
+  .day-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 4px 10px;
+  }
+  .day-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.3px;
+  }
+  .day-badge {
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 600;
+    border: 1px solid var(--divider);
+    padding: 4px 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    background: var(--card);
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow);
+    border-left: 4px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  .card:active { transform: scale(0.985); }
+  .card.done {
+    background: var(--card-done);
+    opacity: 0.7;
+  }
+  .card.done .card-code { color: var(--text-secondary); }
+  .card.done .card-company { color: #9C9488; }
+
+  .card-top { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .card-stamp {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px; font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .card-info { flex: 1; min-width: 0; }
+  .card-company { font-size: 16px; font-weight: 600; color: var(--text); }
+  .card-time { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+  .card-check {
+    width: 28px; height: 28px;
+    border-radius: 14px;
+    border: 2px solid var(--divider);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+    color: transparent;
+  }
+  .card.done .card-check { background: var(--green); border-color: var(--green); color: #fff; }
+
+  .card-code-row { display: flex; align-items: center; gap: 8px; }
+  .card-code-label { font-size: 12px; color: var(--text-secondary); }
+  .card-code {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 1px;
+    font-variant-numeric: tabular-nums;
+  }
+  .card-copy {
+    margin-left: auto;
+    padding: 5px 14px;
+    border-radius: 14px;
+    background: var(--bg);
+    border: none;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    cursor: pointer;
+  }
+  .card-detail { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+
+  .card-expanded { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--divider); }
+  .card.expanded .card-expanded { display: block; }
+  .detail-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; color: var(--text-secondary); }
+  .detail-row .icon { width: 20px; text-align: center; flex-shrink: 0; }
+  .detail-row .val { color: var(--text); flex: 1; }
+  .detail-row .copy-link { font-size: 12px; color: var(--accent); font-weight: 600; cursor: pointer; }
+
+  .card.incomplete { border-left-color: var(--orange); }
+  .card.incomplete .card-top::after {
+    content: "不完整";
+    font-size: 10px; font-weight: 600;
+    background: var(--orange); color: #fff;
+    padding: 2px 8px; border-radius: 8px;
+    position: absolute; top: 8px; right: 8px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 40px;
+    color: var(--text-secondary);
+  }
+  .empty-icon { font-size: 56px; margin-bottom: 16px; }
+  .empty-title { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .empty-desc { font-size: 14px; line-height: 1.6; }
+
+  .bottom-nav {
+    position: absolute;
+    bottom: 0;
+    left: 0; right: 0;
+    height: 72px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--divider);
+    display: flex;
+    align-items: flex-start;
+    padding-top: 8px;
+    justify-content: space-around;
+  }
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    padding: 4px 16px;
+    position: relative;
+  }
+  .nav-item.active .nav-label { color: var(--accent); font-weight: 600; }
+  .nav-item.active::before {
+    content: "";
+    position: absolute;
+    top: -8px;
+    width: 24px; height: 3px;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+  .nav-icon { font-size: 22px; }
+  .nav-label { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="phone-frame">
+  <div class="status-bar">
+    <span>9:41</span>
+    <span>📶 🔋</span>
+  </div>
+  <div class="header">
+    <h1>取件宝</h1>
+    <p class="subtitle">3 件待取 · 2 件已取</p>
+  </div>
+
+  <div class="quick-actions">
+    <button class="quick-btn primary">✓ 全部已取</button>
+  </div>
+
+  <div class="list-area">
+
+    <!-- 今天 -->
+    <div class="day-group">
+      <div class="day-header">
+        <span class="day-label">今天 · 5月30日</span>
+        <span class="day-badge">全部已取</span>
+      </div>
+
+      <!-- 顺丰卡片 - 展开态 -->
+      <div class="card expanded" style="border-left-color: var(--sf);">
+        <div class="card-top">
+          <div class="card-stamp" style="background: var(--sf);">顺</div>
+          <div class="card-info">
+            <div class="card-company">顺丰速运</div>
+            <div class="card-time">2 小时前</div>
+          </div>
+          <div class="card-check">✓</div>
+        </div>
+        <div class="card-code-row">
+          <span class="card-code-label">取件码</span>
+          <span class="card-code">3-2-1088</span>
+          <button class="card-copy">复制</button>
+        </div>
+        <div class="card-detail">📍 菜鸟驿站(阳光花园店)</div>
+        <div class="card-expanded">
+          <div class="detail-row">
+            <span class="icon">📦</span>
+            <span class="val">SF1234567890123</span>
+            <span class="copy-link">复制单号</span>
+          </div>
+          <div class="detail-row">
+            <span class="icon">📱</span>
+            <span class="val">138****1234</span>
+            <span class="copy-link">复制</span>
+          </div>
+          <div class="detail-row">
+            <span class="icon">📋</span>
+            <span class="val">复制全部信息</span>
+            <span class="copy-link">复制</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 极兔卡片 - 折叠态 -->
+      <div class="card" style="border-left-color: var(--jt);">
+        <div class="card-top">
+          <div class="card-stamp" style="background: var(--jt);">极</div>
+          <div class="card-info">
+            <div class="card-company">极兔速递</div>
+            <div class="card-time">5 小时前</div>
+          </div>
+          <div class="card-check">✓</div>
+        </div>
+        <div class="card-code-row">
+          <span class="card-code-label">柜号</span>
+          <span class="card-code">丰巢柜 A-12</span>
+          <button class="card-copy">复制</button>
+        </div>
+        <div class="card-detail">📍 丰巢快递柜(小区东门)</div>
+      </div>
+    </div>
+
+    <!-- 昨天 -->
+    <div class="day-group">
+      <div class="day-header">
+        <span class="day-label">昨天 · 5月29日</span>
+        <span class="day-badge">全部已取</span>
+      </div>
+
+      <!-- 京东 - 已取件 -->
+      <div class="card done" style="border-left-color: var(--jd);">
+        <div class="card-top">
+          <div class="card-stamp" style="background: #c4bfb5;">京</div>
+          <div class="card-info">
+            <div class="card-company">京东物流 <span style="font-size:12px;color:#6B9E6F;">✓ 已取件</span></div>
+            <div class="card-time">昨天 16:32</div>
+          </div>
+          <div class="card-check" style="background:var(--green);border-color:var(--green);color:#fff;">✓</div>
+        </div>
+        <div class="card-code-row">
+          <span class="card-code-label">取件码</span>
+          <span class="card-code">8-3-1024</span>
+          <button class="card-copy">复制</button>
+        </div>
+        <div class="card-detail">📍 京东便利店(万达店)</div>
+      </div>
+    </div>
+
+    <!-- 更早 -->
+    <div class="day-group">
+      <div class="day-header">
+        <span class="day-label">5月27日 · 周二</span>
+      </div>
+
+      <!-- 圆通 - 已取件 -->
+      <div class="card done" style="border-left-color: #9C27B0;">
+        <div class="card-top">
+          <div class="card-stamp" style="background: #c4bfb5;">圆</div>
+          <div class="card-info">
+            <div class="card-company">圆通速递 <span style="font-size:12px;color:#6B9E6F;">✓ 已取件</span></div>
+            <div class="card-time">3 天前</div>
+          </div>
+          <div class="card-check" style="background:var(--green);border-color:var(--green);color:#fff;">✓</div>
+        </div>
+        <div class="card-code-row">
+          <span class="card-code-label">取件码</span>
+          <span class="card-code" style="color:var(--text-secondary);">6-4-7701</span>
+          <button class="card-copy">复制</button>
+        </div>
+        <div class="card-detail">📍 妈妈驿站(学府路店)</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 底部导航 -->
+  <div class="bottom-nav">
+    <div class="nav-item active">
+      <span class="nav-icon">📋</span>
+      <span class="nav-label">快递列表</span>
+    </div>
+    <div class="nav-item">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">匹配规则</span>
+    </div>
+    <div class="nav-item">
+      <span class="nav-icon">⋮</span>
+      <span class="nav-label">设置</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>
