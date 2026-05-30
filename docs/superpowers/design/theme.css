@@ -1,0 +1,95 @@
+/* ===== 取件宝 — 设计令牌系统 ===== */
+
+:root {
+  /* ---- 背景 ---- */
+  --bg-page:            #F9F7F4;
+  --bg-card:            #FFFFFF;
+  --bg-card-done:       #F6F4F1;
+  --bg-input:           #F5F3F0;
+  --bg-accent-soft:     #FDF4EE;
+
+  /* ---- 文字 ---- */
+  --text-primary:       #1C1C1C;
+  --text-secondary:     #8C8C89;
+  --text-tertiary:      #B5B5B1;
+  --text-on-accent:     #FFFFFF;
+
+  /* ---- 强调色（唯一） ---- */
+  --accent:             #D4784C;
+  --accent-hover:       #BF6940;
+
+  /* ---- 边框与分割 ---- */
+  --border:             #EEECE8;
+  --border-light:       #F4F2EE;
+
+  /* ---- 阴影系统 ---- */
+  --shadow-xs:          0 1px 2px rgba(0,0,0,0.03);
+  --shadow-sm:          0 2px 8px rgba(0,0,0,0.05);
+  --shadow-md:          0 6px 18px rgba(0,0,0,0.06);
+  --shadow-lg:          0 12px 32px rgba(0,0,0,0.08);
+  --shadow-elevated:    0 16px 40px rgba(0,0,0,0.10);
+
+  /* ---- 语义色 ---- */
+  --color-done:         #8CA88C;
+  --color-warn:         #D4A24C;
+  --color-error:        #D45A4C;
+
+  /* ---- 快递公司色标 ---- */
+  --courier-sf:         #E2734A;
+  --courier-jd:         #D43D3D;
+  --courier-jt:         #F0824A;
+  --courier-zt:         #4A90D9;
+  --courier-yt:         #9B59B6;
+  --courier-yd:         #E0A03A;
+  --courier-st:         #00A3B5;
+  --courier-ems:        #5A9E6F;
+  --courier-default:    var(--accent);
+
+  /* ---- 圆角 ---- */
+  --radius-xs:          6px;
+  --radius-sm:          10px;
+  --radius-md:          16px;
+  --radius-lg:          20px;
+  --radius-xl:          28px;
+  --radius-full:        9999px;
+
+  /* ---- 间距阶梯 ---- */
+  --space-xs:           4px;
+  --space-sm:           8px;
+  --space-md:           12px;
+  --space-lg:           16px;
+  --space-xl:           20px;
+  --space-2xl:          24px;
+  --space-3xl:          32px;
+
+  /* ---- 字体 ---- */
+  --font-display:       "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body:          "SF Pro Text", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:          "SF Mono", "JetBrains Mono", "Fira Code", monospace;
+
+  /* ---- 字号 ---- */
+  --text-xs:            11px;
+  --text-sm:            13px;
+  --text-base:          15px;
+  --text-md:            17px;
+  --text-lg:            22px;
+  --text-xl:            28px;
+  --text-2xl:           34px;
+  --text-code:          26px;
+
+  /* ---- 字重 ---- */
+  --weight-normal:      400;
+  --weight-medium:      510;
+  --weight-semibold:    590;
+  --weight-bold:        700;
+
+  /* ---- 动画 ---- */
+  --ease-out:           cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring:        cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast:      150ms;
+  --duration-normal:    250ms;
+  --duration-slow:      400ms;
+
+  /* ---- 底部安全区 ---- */
+  --nav-height:         72px;
+}
