@@ -68,6 +68,19 @@ min API 30，架构 MVVM
 - 分发渠道：GitHub Release 侧载；不上 Google Play（READ_SMS 受限权限政策不覆盖本品类）；仅 Android，不支持鸿蒙/iOS
 - 仅处理普通文本短信
 
+## 分支与发布
+
+单人项目，最简模型：**main 永远可发布，分支按"事情"开，版本用 tag 打**。
+
+- **main**：主干，文档+代码都在，永远保持可构建状态
+- **开发分支**按事情命名，干完合回 main 就删：
+  `feat/xxx`（新功能）`fix/xxx`（修 bug）`refactor/xxx`（重构）`docs/xxx`（文档）
+- **版本不是分支，是 tag**：`v1.0.0`、`v1.1.0` 打在 main 上，GitHub Release 从 tag 发 APK；回溯用 `git checkout v1.0.0`
+- **版本号**：`app/build.gradle.kts` 的 `versionName` 与 tag 一致，`versionCode` 每次发布 +1
+- **节奏**：v1.0.0 发布前直接提交 main（无用户，无仪式）；发布后新东西走分支，攒够一波打新 tag
+- **不要** develop/release 分支——那是多人团队的 GitFlow，单人项目只剩负担
+- commit 信息沿用 `feat:/fix:/docs:/chore:` 前缀
+
 ## 交流风格
 
 用户（wenk）偏好：直接、废话少、不讨好。技术问题给精确答案。不喜欢"Sure! I'd be happy to..."这类 filler。用中文。
