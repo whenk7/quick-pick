@@ -16,6 +16,10 @@ interface PackageRecordDao {
     @Query("SELECT * FROM package_records WHERE tracking_number = :tracking AND date(sms_timestamp / 1000, 'unixepoch', 'localtime') = date(:dateMs / 1000, 'unixepoch', 'localtime') LIMIT 1")
     suspend fun findByTrackingAndDate(tracking: String, dateMs: Long): PackageRecordEntity?
 
+    /** 按来源短信 id 查重：无单号规则命中的短信全量重扫时也不能重复入库 */
+    @Query("SELECT * FROM package_records WHERE sms_id = :smsId LIMIT 1")
+    suspend fun findBySmsId(smsId: String): PackageRecordEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(record: PackageRecordEntity): Long
 

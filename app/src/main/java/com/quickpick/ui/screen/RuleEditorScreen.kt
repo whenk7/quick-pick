@@ -290,7 +290,7 @@ private fun TokenGrid(
         listOfNotNull(preview?.trackingNumber, preview?.pickupCode, preview?.address, preview?.phone)
     }
 
-    // FlowRow 在 Compose foundation 1.7+ 已是稳定 API（BOM 2026.09 无需 @OptIn）
+    // FlowRow 在 Compose foundation 1.7+ 已是稳定 API（BOM 2026.06 无需 @OptIn）
     androidx.compose.foundation.layout.FlowRow(
         horizontalArrangement = Arrangement.spacedBy(5.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)

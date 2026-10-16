@@ -32,9 +32,13 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private var importedCount = 0
     private var skippedCount = 0
 
-    /** 导出全部规则 JSON；为空时提示并返回 null（edge-cases 四） */
-    fun exportAllJson(): String? {
-        val list = rules.value
+    /**
+     * 导出全部规则 JSON；为空时提示并返回 null（edge-cases 四）。
+     * suspend 直读仓库：rules 是 WhileSubscribed，本页无订阅者时 .value 恒为 emptyList，
+     * 导出是动作不是状态，不能依赖它
+     */
+    suspend fun exportAllJson(): String? {
+        val list = ruleRepo.getAll()
         if (list.isEmpty()) {
             _events.tryEmit("暂无规则可导出")
             return null

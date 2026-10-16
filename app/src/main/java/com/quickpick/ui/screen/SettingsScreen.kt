@@ -21,6 +21,7 @@ import com.quickpick.ui.component.ConfirmDialog
 import com.quickpick.ui.theme.*
 import com.quickpick.ui.viewmodel.PackageListViewModel
 import com.quickpick.ui.viewmodel.SettingsViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(
@@ -29,6 +30,7 @@ fun SettingsScreen(
     onOpenAiPrompt: () -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val conflict by settingsViewModel.conflict.collectAsStateWithLifecycle()
     var confirmAllVisible by remember { mutableStateOf(false) }
 
@@ -77,13 +79,15 @@ fun SettingsScreen(
         SectionTitle("规则管理")
         SettingsRow("📤 导出全部规则", onClick = {
             // 导出走系统分享面板（本地 ACTION_SEND，不涉及任何网络）
-            val json = settingsViewModel.exportAllJson()
-            if (json != null) {
-                val intent = Intent(Intent.ACTION_SEND).apply {
-                    type = "application/json"
-                    putExtra(Intent.EXTRA_TEXT, json)
+            scope.launch {
+                val json = settingsViewModel.exportAllJson()
+                if (json != null) {
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "application/json"
+                        putExtra(Intent.EXTRA_TEXT, json)
+                    }
+                    context.startActivity(Intent.createChooser(intent, "导出规则"))
                 }
-                context.startActivity(Intent.createChooser(intent, "导出规则"))
             }
         })
         // MIME 用 */*：部分国产 ROM 文件管理器不认 application/json 会选不到文件
@@ -94,7 +98,7 @@ fun SettingsScreen(
         // 关于
         SectionTitle("关于")
         SettingsRow("版本号", subtitle = BuildConfig.VERSION_NAME, onClick = {})
-        SettingsRow("项目地址", subtitle = "github.com/quick-pick", onClick = {})
+        SettingsRow("项目地址", subtitle = "github.com/whenk7/quick-pick", onClick = {})
 
         Spacer(modifier = Modifier.height(24.dp))
 

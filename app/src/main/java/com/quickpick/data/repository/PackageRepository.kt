@@ -27,6 +27,10 @@ class PackageRepository(private val dao: PackageRecordDao) {
      * - 其余 → 插入新记录
      */
     suspend fun insertFromSms(record: PackageRecord) {
+        // 同一条短信只入库一次：全量重扫（clearScanned）时的兜底去重，
+        // 不依赖单号有无——无单号规则命中的短信此前每次刷新都会重复插入
+        val smsId = record.smsId
+        if (smsId != null && dao.findBySmsId(smsId) != null) return
         val tracking = record.trackingNumber
         if (!tracking.isNullOrEmpty()) {
             val existing = dao.findByTrackingAndDate(tracking, record.smsTimestamp)

@@ -31,7 +31,7 @@ fun DayGroup(
     var confirmVisible by remember { mutableStateOf(false) }
     // 该天无未取快递时不显示「全部已取」（edge-cases 五）
     val hasUnpicked = packages.any { !it.isPickedUp }
-    // 折叠箭头轻微旋转（200ms ease-out，不弹跳）
+    // 折叠箭头轻微旋转（animateFloatAsState 默认 spring，NoBouncy 不弹跳）
     val arrowRotation by animateFloatAsState(
         targetValue = if (collapsed) -90f else 0f,
         label = "arrow"

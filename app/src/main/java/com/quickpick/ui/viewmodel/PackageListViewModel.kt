@@ -117,6 +117,9 @@ class PackageListViewModel(application: Application) : AndroidViewModel(applicat
     /** 手动全量重扫（下拉刷新）：清空已扫标记后重扫 */
     fun refresh() {
         viewModelScope.launch {
+            // 扫描在途时不清标记：否则 clearScanned 后 scanSms 直接 return，
+            // 下次扫描会把在途那轮已处理的短信再处理一遍
+            if (_isScanning.value) return@launch
             smsRepo.clearScanned()
             scanSms()
         }
