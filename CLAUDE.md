@@ -15,6 +15,7 @@ Android 快递取件信息管理应用。从短信自动提取取件码/柜号/�
 Kotlin + Jetpack Compose + Material 3 + Room
 min API 30，架构 MVVM
 匹配引擎：纯字符串前后缀锚点，不用正则
+Compose BOM 实际 2026.06.01（计划写 2026.09，因其硬要求 compileSdk 37 + AGP 9.1，2026-10-16 裁决降级）
 
 ## 我的偏好
 
@@ -89,20 +90,20 @@ min API 30，架构 MVVM
 
 - ✅ 产品规格
 - ✅ 设计系统
-- ✅ 实现计划（2026-10-16 经全面复审修订：修复 9 处编译/运行阻断、补齐 10 项缺失功能、版本矩阵升级为 Kotlin 2.3.20 + AGP 8.13 + KSP2 + Compose BOM 2026.09 + targetSdk 36；拆为总纲+9分册）
-- ⬜ 开始写代码（按 `docs/superpowers/plans/quickpick/00-master.md` 入口）
+- ✅ 实现计划（总纲+9分册）
+- ✅ 代码实现 R1–R5 全部完成（2026-10-16，SDD 流程：逐轮实现+评审+opus 终审+修复波；档案在 `.superpowers/sdd/00-master/`，含 ledger/各轮报告/评审包）
+- ⬜ 真机验收（16 项运行时清单：`.superpowers/sdd/00-master/r5-report.md` §5.4，重点：首扫、换柜覆盖、AI 导入回显、权限回收 banner、编辑保存→重扫弹窗）
+- ⬜ 真机过后打 tag `v1.0.0` + GitHub Release 发 APK
 
 ## 执行模式（已和用户商定）
 
 - **主会话（强模型）当总控**：派活、审 diff、排障、把每轮出口标准
-- **执行 agent 用 sonnet 档**（当前 = qwen3.8-max）：按分册建文件，照抄计划代码，不自由发挥
-- **R1 建议强模型直接跑**：Gradle 环境/sync 翻车概率最高的一轮，后面 R2-R5 再降档
-- **构建环境**：本机（wen 的 Linux）无 JDK/Gradle/Android SDK——开工前先装（JDK 17 + cmdline-tools + SDK 36，headless 即可），或改用 Android Studio 同步
+- **执行 agent 用 sonnet 档**（档级映射随模型配置调整）：按分册建文件，照抄计划代码，不自由发挥
+- **评审分层**：转录轮（实现者报零偏差+构建绿）可跳独立评审，复杂轮/集成轮保留，终审用顶格模型——2026-10-16 实测：终审抓到 2 个 Critical 跨层缺陷，轮级评审的价值在确认不在发现
+- **构建环境已装好**：JDK 17（/home/wen/dev/jdk）+ Gradle 8.14.3 + SDK 36（/home/wen/Android/Sdk），local.properties 已配，`./gradlew` 可用
 
 ## 下一步
 
-1. 读 `docs/superpowers/plans/quickpick/00-master.md`（总纲：架构/文件地图/轮次）
-2. 装构建环境（见上）
-3. 按 5 轮执行，每轮对应分册：R1=01+02 → R2=03 → R3=04 → R4=05a+05b+05c → R5=06+07
-4. 分册里每个 Task 的代码已完整写出，直接复制创建文件即可
-5. 每轮结束跑 `./gradlew assembleDebug`，绿了 commit 再进下一轮
+1. 真机装 `app/build/outputs/apk/debug/app-debug.apk`，过 16 项运行时验收（清单见 `.superpowers/sdd/00-master/r5-report.md` §5.4）
+2. 验收过 → 打 tag `v1.0.0` → GitHub Release 发 APK（assembleRelease 前先确认 `./gradlew lintVitalRelease` 绿）
+3. v1.0.1 候选（终审判定可延期项）：outlinedButtonBorder deprecation、rememberSaveable tab、死代码清理（SettingsViewModel.rules、Color.Pending）、「全部已取」权限门控放开、编辑器重复词块锚定增强

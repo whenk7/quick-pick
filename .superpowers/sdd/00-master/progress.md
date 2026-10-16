@@ -54,3 +54,25 @@ Ruling: 扫描重派，M3 兼容性改为浅查（凭知识标注，禁止反编
 - Task R4c: minor (deferred): _events.tryEmit 极端下丢一条 Toast（plan-mandated）——终审裁定
 - Task R4c: minor (deferred): validatedJson() 主线程 Gson（体量小无碍，plan-mandated）——终审裁定
 - Task R4c: complete (commit c8a6de9, 零偏差+构建绿，按裁决跳过独立评审，风险并入终审)——5 文件 672 行，实现者自报 3 条分册原生瑕疵均已如实记录
+- Task R5: minor (deferred): AppNavigation.kt:133 currentTab 用 remember 非 rememberSaveable，配置变更 tab 跳回快递（plan-mandated）——真机顺带观察
+- Task R5: minor (deferred): AppNavigation.kt:57-58 setOnboardingDone 异步、navigate 先行，极端下重放引导页（后果良性幂等，plan-mandated）——备案
+- Task R5: ⚠️ lint error PermissionImpliesUnsupportedChromeOsHardware（Manifest 缺 telephony uses-feature）——终审修复波裁决：加 uses-feature required=false 一行 或 disable
+- Task R5: ⚠️ lint 13 warning 依赖新版提示（版本矩阵锁定，不动）+ R1 资源遗留（图标缺 monochrome、mipmap-v26 冗余）——终审顺手
+- Task R5: complete (commits 542165c..5a8b193, review clean + 2 plan-mandated Minor 延期)——12 项跨轮签名全匹配，静态验收 8/24（16 待真机），05a 回写逐字节一致，文案 grep 排注释后零命中（独立复跑确认）
+
+## 终审（opus，b0a2019..5a8b193）
+
+结论 With fixes。抓到 2 Critical + 2 Important（全是轮级评审盲区）：
+- Critical #1 导出全部规则硬失效（WhileSubscribed 无订阅者）——R4c 跳评审放过的跨层问题，终审按设计兜底
+- Critical #2 无单号记录 + 下拉刷新 = 稳定重复入库
+- Important #3 allowBackup=true 与「不上传」声明事实冲突（Auto Backup 传 Google Drive）
+- Important #4 lint error 阻断 assembleRelease
+延期 14 条裁决：必修 2（#3 重复入库、#13 lint），可延期 6，不修 5（TokenChip 圆角、processNext、tryEmit、主线程 Gson、引导页重放——理由见终审报告）
+Ruling: 项目地址占位符顺手改为真实仓库 whenk7/quick-pick —— 终审 Minor #5，远程 URL 已知 —— 若错：零成本
+Ruling: 规格书「设置页一键按天已取」与实现（列表页分组标题）的字面偏差不回写规格书 —— 规格书是用户的权威文档，措辞留给用户定 —— 若错：规格书与实现有一处无害字面差
+
+## 终审修复波（commits 5a8b193..4b2c109）
+
+7/7 项落地，assembleDebug 绿，lintDebug 绿（stash 前后对照确凿）。
+- minor (deferred): allowBackup=false 引出 DataExtractionRules warning（D2D 本地传输非上传，合规成立）——v1.x 可加 dataExtractionRules 彻底关
+- minor (deferred): SettingsViewModel.rules 修复后成死代码——v1.0.1 删，不为 3 行再开评审轮
