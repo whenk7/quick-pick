@@ -6,6 +6,10 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+// CI 签名接线：全部密钥从环境变量读取（GitHub Actions secret 注入）。
+// 本地无 KEYSTORE_FILE 时 assembleRelease 产未签名包，不报错。
+val keystoreFile = System.getenv("KEYSTORE_FILE")
+
 android {
     namespace = "com.quickpick"
     compileSdk = 36
@@ -18,11 +22,25 @@ android {
         versionName = "1.0.0"
     }
 
+    signingConfigs {
+        if (keystoreFile != null) {
+            create("release") {
+                storeFile = file(keystoreFile)
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            if (keystoreFile != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
