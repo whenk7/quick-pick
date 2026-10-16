@@ -1,0 +1,19 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- 圆润小包裹身体 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M43,40 h22 a9,9 0 0 1 9,9 v14 a9,9 0 0 1 -9,9 h-22 a9,9 0 0 1 -9,-9 v-14 a9,9 0 0 1 9,-9 z"/>
+    <!-- 顶部胶带 -->
+    <path
+        android:fillColor="#F9F9F6"
+        android:pathData="M51,40 h6 v10 l-3,-3 l-3,3 z"/>
+    <!-- 双眼 + 微笑 -->
+    <path android:fillColor="#6AB37B" android:pathData="M47,56 m-2,0 a2,2 0 1,1 4,0 a2,2 0 1,1 -4,0"/>
+    <path android:fillColor="#6AB37B" android:pathData="M61,56 m-2,0 a2,2 0 1,1 4,0 a2,2 0 1,1 -4,0"/>
+    <path
+        android:strokeColor="#6AB37B" android:strokeWidth="2"
+        android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M49,62 q5,4 10,0"/>
+</vector>

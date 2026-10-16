@@ -1,1 +1,15 @@
 .superpowers/
+.claude/settings.local.json
+
+# Android / Gradle
+.gradle/
+build/
+app/build/
+local.properties
+*.iml
+.idea/
+.cxx/
+
+# 签名密钥永不入库
+*.keystore
+*.jks

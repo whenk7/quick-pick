@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 唯一的权限请求。无任何网络权限，物理层面保证"不联网" -->
+    <uses-permission android:name="android.permission.READ_SMS" />
+
+    <application
+        android:name=".QuickPickApp"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="取件宝"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.QuickPick">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
