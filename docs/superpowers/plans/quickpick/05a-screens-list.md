@@ -572,13 +572,15 @@ fun RuleListScreen(
             // 自定义规则
             if (customs.isNotEmpty()) {
                 item {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "自定义规则",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextTertiary,
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
+                    Column {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "自定义规则",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextTertiary,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                    }
                 }
                 items(customs, key = { "custom-${it.id}" }) { rule ->
                     RuleCard(
@@ -615,18 +617,20 @@ fun RuleListScreen(
 
             // 新增按钮
             item {
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = onAddRule,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    border = ButtonDefaults.outlinedButtonBorder.copy(
-                        brush = androidx.compose.ui.graphics.SolidColor(Primary)
-                    )
-                ) {
-                    Text("+ 新增匹配规则", color = Primary)
+                Column {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = onAddRule,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        border = ButtonDefaults.outlinedButtonBorder.copy(
+                            brush = androidx.compose.ui.graphics.SolidColor(Primary)
+                        )
+                    ) {
+                        Text("+ 新增匹配规则", color = Primary)
+                    }
+                    Spacer(modifier = Modifier.height(80.dp))
                 }
-                Spacer(modifier = Modifier.height(80.dp))
             }
         }
     }
