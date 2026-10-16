@@ -1,0 +1,144 @@
+package com.quickpick.ui.viewmodel
+
+import android.Manifest
+import android.app.Application
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.quickpick.QuickPickApp
+import com.quickpick.data.repository.PackageRepository
+import com.quickpick.data.repository.RuleRepository
+import com.quickpick.data.repository.SmsRepository
+import com.quickpick.domain.engine.MatchEngine
+import com.quickpick.domain.model.PackageRecord
+import com.quickpick.util.SmsReader
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+
+class PackageListViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val db = (application as QuickPickApp).database
+    private val packageRepo = PackageRepository(db.packageRecordDao())
+    private val ruleRepo = RuleRepository(db.matchRuleDao())
+    private val smsRepo = SmsRepository(db.scannedSmsDao())
+
+    val packages: StateFlow<List<PackageRecord>> = packageRepo.observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val unpickedCount: StateFlow<Int> = packageRepo.observeUnpickedCount()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val ruleCount: StateFlow<Int> = ruleRepo.observeAll()
+        .map { it.size }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    private val _scannedCount = MutableStateFlow(0)
+    val scannedCount: StateFlow<Int> = _scannedCount
+
+    private val _isScanning = MutableStateFlow(false)
+    val isScanning: StateFlow<Boolean> = _isScanning
+
+    /** 是否有短信权限。由 UI 在进入页面/回到前台时调用 refreshPermissionState() 刷新 */
+    private val _hasPermission = MutableStateFlow(false)
+    val hasPermission: StateFlow<Boolean> = _hasPermission
+
+    /** 折叠的日期分组（当天 00:00 时间戳），会话内有效 */
+    private val _collapsedDays = MutableStateFlow<Set<Long>>(emptySet())
+    val collapsedDays: StateFlow<Set<Long>> = _collapsedDays
+
+    /** 一次性提示（Toast） */
+    private val _events = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val events: SharedFlow<String> = _events
+
+    /** UI 在进入页面与 ON_RESUME 时调用：刷新权限状态，有权限则增量扫描 */
+    fun refreshPermissionState() {
+        val granted = ContextCompat.checkSelfPermission(
+            getApplication(), Manifest.permission.READ_SMS
+        ) == PackageManager.PERMISSION_GRANTED
+        _hasPermission.value = granted
+        if (granted) scanSms()
+    }
+
+    fun scanSms() {
+        if (_isScanning.value) return
+        viewModelScope.launch {
+            _isScanning.value = true
+            try {
+                // 权限判定前置：不再靠「读到空表」猜权限状态
+                val granted = ContextCompat.checkSelfPermission(
+                    getApplication(), Manifest.permission.READ_SMS
+                ) == PackageManager.PERMISSION_GRANTED
+                _hasPermission.value = granted
+                if (!granted) return@launch
+
+                val messages = SmsReader.readAll(getApplication())
+                _scannedCount.value = smsRepo.scannedCount()
+
+                val rules = ruleRepo.getAll()
+                if (rules.isEmpty()) return@launch
+
+                messages.forEach { sms ->
+                    if (smsRepo.isScanned(sms.id)) return@forEach
+                    val result = MatchEngine.findBestMatch(sms.body, rules)
+                    if (result != null) {
+                        val (rule, fields) = result
+                        packageRepo.insertFromSms(
+                            PackageRecord(
+                                companyName = rule.name,
+                                trackingNumber = fields.trackingNumber,
+                                pickupCode = fields.pickupCode,
+                                address = fields.address,
+                                phone = fields.phone,
+                                smsBody = sms.body,
+                                smsTimestamp = sms.timestamp,
+                                // 配置了但没提取到才算不完整；电话可选，不硬编码字段数
+                                isIncomplete = fields.matchedCount < rule.configuredFieldCount,
+                                ruleId = rule.id,
+                                smsId = sms.id
+                            )
+                        )
+                    }
+                    smsRepo.markScanned(sms.id)
+                }
+                _scannedCount.value = smsRepo.scannedCount()
+            } catch (e: SecurityException) {
+                // 扫描过程中权限被系统回收
+                _hasPermission.value = false
+            } catch (e: Exception) {
+                // 存储空间不足、数据库异常等：温和提示，不崩溃（edge-cases 六）
+                _events.tryEmit("没能完成扫描，请稍后再试～")
+            } finally {
+                _isScanning.value = false
+            }
+        }
+    }
+
+    /** 手动全量重扫（下拉刷新）：清空已扫标记后重扫 */
+    fun refresh() {
+        viewModelScope.launch {
+            smsRepo.clearScanned()
+            scanSms()
+        }
+    }
+
+    fun togglePickedUp(record: PackageRecord) {
+        viewModelScope.launch {
+            packageRepo.setPickedUp(record.id, !record.isPickedUp)
+        }
+    }
+
+    fun markAllPickedUp() {
+        viewModelScope.launch { packageRepo.markAllPickedUp() }
+    }
+
+    fun markDayPickedUp(dateMs: Long) {
+        viewModelScope.launch { packageRepo.markDayPickedUp(dateMs) }
+    }
+
+    fun toggleDayCollapse(dateMs: Long) {
+        _collapsedDays.value = _collapsedDays.value.let {
+            if (dateMs in it) it - dateMs else it + dateMs
+        }
+    }
+}
