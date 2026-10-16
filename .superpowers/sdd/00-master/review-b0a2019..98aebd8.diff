@@ -1,0 +1,1434 @@
+# Review package: b0a2019..98aebd8
+
+## Commits
+98aebd8 feat: R1 项目骨架 + 数据层 + 匹配引擎（01+02 分册）
+
+## Files changed
+ .gitignore                                         |  14 ++
+ app/build.gradle.kts                               |  86 +++++++
+ app/src/main/AndroidManifest.xml                   |  24 ++
+ app/src/main/java/com/quickpick/MainActivity.kt    |  33 +++
+ app/src/main/java/com/quickpick/QuickPickApp.kt    |  29 +++
+ .../main/java/com/quickpick/data/db/AppDatabase.kt |  44 ++++
+ .../java/com/quickpick/data/db/dao/MatchRuleDao.kt |  30 +++
+ .../com/quickpick/data/db/dao/PackageRecordDao.kt  |  34 +++
+ .../com/quickpick/data/db/dao/ScannedSmsDao.kt     |  23 ++
+ .../quickpick/data/db/entity/MatchRuleEntity.kt    |  24 ++
+ .../data/db/entity/PackageRecordEntity.kt          |  31 +++
+ .../quickpick/data/db/entity/ScannedSmsEntity.kt   |  13 ++
+ .../java/com/quickpick/data/local/SettingsStore.kt |  36 +++
+ .../java/com/quickpick/data/preset/PresetRules.kt  |  48 ++++
+ .../com/quickpick/domain/engine/MatchEngine.kt     |  67 ++++++
+ .../com/quickpick/domain/model/ExtractedFields.kt  |  22 ++
+ .../java/com/quickpick/domain/model/MatchRule.kt   |  29 +++
+ .../com/quickpick/domain/model/PackageRecord.kt    |  16 ++
+ app/src/main/java/com/quickpick/ui/theme/Color.kt  |  56 +++++
+ app/src/main/java/com/quickpick/ui/theme/Shape.kt  |  12 +
+ app/src/main/java/com/quickpick/ui/theme/Theme.kt  |  45 ++++
+ app/src/main/java/com/quickpick/ui/theme/Type.kt   |  58 +++++
+ .../main/res/drawable/ic_launcher_foreground.xml   |  19 ++
+ app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml |   5 +
+ app/src/main/res/values/colors.xml                 |   5 +
+ app/src/main/res/values/themes.xml                 |   6 +
+ build.gradle.kts                                   |   8 +
+ gradle.properties                                  |   8 +
+ gradle/wrapper/gradle-wrapper.jar                  | Bin 0 -> 43764 bytes
+ gradle/wrapper/gradle-wrapper.properties           |   7 +
+ gradlew                                            | 251 +++++++++++++++++++++
+ gradlew.bat                                        |  94 ++++++++
+ settings.gradle.kts                                |  19 ++
+ 33 files changed, 1196 insertions(+)
+
+## Diff
+diff --git a/.gitignore b/.gitignore
+index 7a95436..399e8fd 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1 +1,15 @@
+ .superpowers/
++.claude/settings.local.json
++
++# Android / Gradle
++.gradle/
++build/
++app/build/
++local.properties
++*.iml
++.idea/
++.cxx/
++
++# 签名密钥永不入库
++*.keystore
++*.jks
+diff --git a/app/build.gradle.kts b/app/build.gradle.kts
+new file mode 100644
+index 0000000..7774da4
+--- /dev/null
++++ b/app/build.gradle.kts
+@@ -0,0 +1,86 @@
++// app/build.gradle.kts
++plugins {
++    id("com.android.application")
++    id("org.jetbrains.kotlin.android")
++    id("org.jetbrains.kotlin.plugin.compose")
++    id("com.google.devtools.ksp")
++}
++
++android {
++    namespace = "com.quickpick"
++    compileSdk = 36
++
++    defaultConfig {
++        applicationId = "com.quickpick"
++        minSdk = 30
++        targetSdk = 36
++        versionCode = 1
++        versionName = "1.0.0"
++    }
++
++    buildTypes {
++        release {
++            isMinifyEnabled = true
++            isShrinkResources = true
++            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
++        }
++    }
++
++    compileOptions {
++        sourceCompatibility = JavaVersion.VERSION_17
++        targetCompatibility = JavaVersion.VERSION_17
++    }
++
++    buildFeatures {
++        compose = true
++        buildConfig = true   // 设置页显示 BuildConfig.VERSION_NAME
++    }
++
++    packaging {
++        resources.excludes += "META-INF/{AL2.0,LGPL2.1}"
++    }
++}
++
++// Kotlin 2.x 推荐写法，替代已废弃的 android.kotlinOptions
++kotlin {
++    jvmToolchain(17)
++}
++
++dependencies {
++    // Compose BOM 2026.06.01（Compose 1.11.4 / M3 1.4.0）
++    // 偏差说明：分册原定 2026.09.00（Compose 1.12.1），但其 AAR 元数据要求
++    // minCompileSdk=37 + AGP≥9.1.0，与本计划 compileSdk 36 + AGP 8.13 矩阵冲突。
++    // 2026.06.01 是映射到 Compose 1.11.x（minCompileSdk=35, minAGP=8.6）的最新版 BOM。
++    val composeBom = platform("androidx.compose:compose-bom:2026.06.01")
++    implementation(composeBom)
++    implementation("androidx.compose.ui:ui")
++    implementation("androidx.compose.ui:ui-graphics")
++    implementation("androidx.compose.ui:ui-tooling-preview")
++    implementation("androidx.compose.material3:material3")
++    // 注意：不引 material-icons-extended（图标全部用 emoji，见设计系统第九节）
++
++    // Activity & Navigation
++    implementation("androidx.activity:activity-compose:1.11.0")
++    implementation("androidx.navigation:navigation-compose:2.9.5")
++
++    // Lifecycle（collectAsStateWithLifecycle 需要 runtime-compose）
++    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.4")
++    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4")
++
++    // Room（KSP2）
++    implementation("androidx.room:room-runtime:2.8.4")
++    implementation("androidx.room:room-ktx:2.8.4")
++    ksp("androidx.room:room-compiler:2.8.4")
++
++    // DataStore（首启标记、预置规则灌入标记）
++    implementation("androidx.datastore:datastore-preferences:1.1.7")
++
++    // Coroutines
++    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
++
++    // Gson（JSON 导入导出）
++    implementation("com.google.code.gson:gson:2.13.1")
++
++    // Debug
++    debugImplementation("androidx.compose.ui:ui-tooling")
++}
+diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+new file mode 100644
+index 0000000..5a55194
+--- /dev/null
++++ b/app/src/main/AndroidManifest.xml
+@@ -0,0 +1,24 @@
++<?xml version="1.0" encoding="utf-8"?>
++<manifest xmlns:android="http://schemas.android.com/apk/res/android">
++
++    <!-- 唯一的权限请求。无任何网络权限，物理层面保证"不联网" -->
++    <uses-permission android:name="android.permission.READ_SMS" />
++
++    <application
++        android:name=".QuickPickApp"
++        android:allowBackup="true"
++        android:icon="@mipmap/ic_launcher"
++        android:label="取件宝"
++        android:supportsRtl="true"
++        android:theme="@style/Theme.QuickPick">
++
++        <activity
++            android:name=".MainActivity"
++            android:exported="true">
++            <intent-filter>
++                <action android:name="android.intent.action.MAIN" />
++                <category android:name="android.intent.category.LAUNCHER" />
++            </intent-filter>
++        </activity>
++    </application>
++</manifest>
+diff --git a/app/src/main/java/com/quickpick/MainActivity.kt b/app/src/main/java/com/quickpick/MainActivity.kt
+new file mode 100644
+index 0000000..4d1ff2f
+--- /dev/null
++++ b/app/src/main/java/com/quickpick/MainActivity.kt
+@@ -0,0 +1,33 @@
++package com.quickpick
++
++import android.os.Bundle
++import androidx.activity.ComponentActivity
++import androidx.activity.compose.setContent
++import androidx.activity.enableEdgeToEdge
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.Surface
++import androidx.compose.material3.Text
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import com.quickpick.ui.theme.Background
++import com.quickpick.ui.theme.QuickPickTheme
++
++class MainActivity : ComponentActivity() {
++    override fun onCreate(savedInstanceState: Bundle?) {
++        super.onCreate(savedInstanceState)
++        // targetSdk 36 强制 edge-to-edge，内容 inset 由各 Screen 的 Scaffold 处理
++        enableEdgeToEdge()
++        setContent {
++            QuickPickTheme {
++                // 占位页：Phase 6 替换为 AppNavigation
++                Surface(modifier = Modifier.fillMaxSize(), color = Background) {
++                    Box(contentAlignment = Alignment.Center) {
++                        Text("取件宝 📦", style = MaterialTheme.typography.headlineMedium)
++                    }
++                }
++            }
++        }
++    }
++}
+diff --git a/app/src/main/java/com/quickpick/QuickPickApp.kt b/app/src/main/java/com/quickpick/QuickPickApp.kt
+new file mode 100644
+index 0000000..a686d6a
+--- /dev/null
++++ b/app/src/main/java/com/quickpick/QuickPickApp.kt
+@@ -0,0 +1,29 @@
++package com.quickpick
++
++import android.app.Application
++import android.util.Log
++import com.quickpick.data.db.AppDatabase
++import com.quickpick.data.local.SettingsStore
++import com.quickpick.data.preset.PresetRules
++import kotlinx.coroutines.CoroutineScope
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.SupervisorJob
++import kotlinx.coroutines.launch
++
++class QuickPickApp : Application() {
++
++    val database: AppDatabase by lazy { AppDatabase.getInstance(this) }
++    val settingsStore: SettingsStore by lazy { SettingsStore(this) }
++
++    // SupervisorJob：种子出错不影响其他协程；带日志，不静默
++    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
++
++    override fun onCreate() {
++        super.onCreate()
++        appScope.launch {
++            runCatching {
++                PresetRules.seedIfNeeded(settingsStore, database.matchRuleDao())
++            }.onFailure { Log.w("QuickPickApp", "预置规则没能灌入", it) }
++        }
++    }
++}
+diff --git a/app/src/main/java/com/quickpick/data/db/AppDatabase.kt b/app/src/main/java/com/quickpick/data/db/AppDatabase.kt
+new file mode 100644
+index 0000000..fb97ac4
+--- /dev/null
++++ b/app/src/main/java/com/quickpick/data/db/AppDatabase.kt
+@@ -0,0 +1,44 @@
++package com.quickpick.data.db
++
++import android.content.Context
++import androidx.room.Database
++import androidx.room.Room
++import androidx.room.RoomDatabase
++import com.quickpick.data.db.dao.MatchRuleDao
++import com.quickpick.data.db.dao.PackageRecordDao
++import com.quickpick.data.db.dao.ScannedSmsDao
++import com.quickpick.data.db.entity.MatchRuleEntity
++import com.quickpick.data.db.entity.PackageRecordEntity
++import com.quickpick.data.db.entity.ScannedSmsEntity
++
++@Database(
++    entities = [
++        MatchRuleEntity::class,
++        PackageRecordEntity::class,
++        ScannedSmsEntity::class
++    ],
++    version = 1,
++    exportSchema = false
++)
++abstract class AppDatabase : RoomDatabase() {
++    abstract fun matchRuleDao(): MatchRuleDao
++    abstract fun packageRecordDao(): PackageRecordDao
++    abstract fun scannedSmsDao(): ScannedSmsDao
++
++    companion object {
++        @Volatile
++        private var INSTANCE: AppDatabase? = null
++
++        fun getInstance(context: Context): AppDatabase {
++            return INSTANCE ?: synchronized(this) {
++                val instance = Room.databaseBuilder(
++                    context.applicationContext,
++                    AppDatabase::class.java,
++                    "quickpick.db"
++                ).build()
++                INSTANCE = instance
++                instance
++            }
++        }
++    }
++}
+diff --git a/app/src/main/java/com/quickpick/data/db/dao/MatchRuleDao.kt b/app/src/main/java/com/quickpick/data/db/dao/MatchRuleDao.kt
+new file mode 100644
+index 0000000..aec3ec4
+--- /dev/null
++++ b/app/src/main/java/com/quickpick/data/db/dao/MatchRuleDao.kt
+@@ -0,0 +1,30 @@
++package com.quickpick.data.db.dao
++
++import androidx.room.*
++import com.quickpick.data.db.entity.MatchRuleEntity
++import kotlinx.coroutines.flow.Flow
++
++@Dao
++interface MatchRuleDao {
++    @Query("SELECT * FROM match_rules ORDER BY is_preset DESC, created_at ASC")
++    fun observeAll(): Flow<List<MatchRuleEntity>>
++
++    @Query("SELECT * FROM match_rules ORDER BY is_preset DESC, created_at ASC")
++    suspend fun getAll(): List<MatchRuleEntity>
++
++    @Query("SELECT * FROM match_rules WHERE id = :id")
++    suspend fun getById(id: Long): MatchRuleEntity?
++
++    /** 导入时的同名冲突检测 */
++    @Query("SELECT * FROM match_rules WHERE name = :name")
++    suspend fun getByName(name: String): List<MatchRuleEntity>
++
++    @Insert(onConflict = OnConflictStrategy.REPLACE)
++    suspend fun insert(rule: MatchRuleEntity): Long
++
++    @Update
++    suspend fun update(rule: MatchRuleEntity)
++
++    @Query("DELETE FROM match_rules WHERE id = :id")
++    suspend fun deleteById(id: Long)
++}
+diff --git a/app/src/main/java/com/quickpick/data/db/dao/PackageRecordDao.kt b/app/src/main/java/com/quickpick/data/db/dao/PackageRecordDao.kt
+new file mode 100644
+index 0000000..b7b3ec1
+--- /dev/null
++++ b/app/src/main/java/com/quickpick/data/db/dao/PackageRecordDao.kt
+@@ -0,0 +1,34 @@
++package com.quickpick.data.db.dao
++
++import androidx.room.*
++import com.quickpick.data.db.entity.PackageRecordEntity
++import kotlinx.coroutines.flow.Flow
++
++@Dao
++interface PackageRecordDao {
++    @Query("SELECT * FROM package_records ORDER BY sms_timestamp DESC")
++    fun observeAll(): Flow<List<PackageRecordEntity>>
++
++    @Query("SELECT COUNT(*) FROM package_records WHERE is_picked_up = 0")
++    fun observeUnpickedCount(): Flow<Int>
++
++    // 注意必须带 'localtime'：date() 默认 UTC 日界，UTC+8 下会标错天
++    @Query("SELECT * FROM package_records WHERE tracking_number = :tracking AND date(sms_timestamp / 1000, 'unixepoch', 'localtime') = date(:dateMs / 1000, 'unixepoch', 'localtime') LIMIT 1")
++    suspend fun findByTrackingAndDate(tracking: String, dateMs: Long): PackageRecordEntity?
++
++    @Insert(onConflict = OnConflictStrategy.REPLACE)
++    suspend fun insert(record: PackageRecordEntity): Long
++
++    @Update
++    suspend fun update(record: PackageRecordEntity)
++
++    /** 标记已取/未取的专用更新：不动 created_at 等其他字段 */
++    @Query("UPDATE package_records SET is_picked_up = :picked WHERE id = :id")
++    suspend fun updatePickedUp(id: Long, picked: Boolean)
++
++    @Query("UPDATE package_records SET is_picked_up = 1")
++    suspend fun markAllPickedUp()
++
++    @Query("UPDATE package_records SET is_picked_up = 1 WHERE date(sms_timestamp / 1000, 'unixepoch', 'localtime') = date(:dateMs / 1000, 'unixepoch', 'localtime')")
++    suspend fun markDayPickedUp(dateMs: Long)
++}
+diff --git a/app/src/main/java/com/quickpick/data/db/dao/ScannedSmsDao.kt b/app/src/main/java/com/quickpick/data/db/dao/ScannedSmsDao.kt
+new file mode 100644
+index 0000000..71b33ff
+--- /dev/null
++++ b/app/src/main/java/com/quickpick/data/db/dao/ScannedSmsDao.kt
+@@ -0,0 +1,23 @@
++package com.quickpick.data.db.dao
++
++import androidx.room.*
++import com.quickpick.data.db.entity.ScannedSmsEntity
++
++@Dao
++interface ScannedSmsDao {
++    @Query("SELECT EXISTS(SELECT 1 FROM scanned_sms WHERE sms_id = :smsId)")
++    suspend fun exists(smsId: String): Boolean
++
++    @Insert(onConflict = OnConflictStrategy.IGNORE)
++    suspend fun insert(entity: ScannedSmsEntity)
++
++    @Query("SELECT COUNT(*) FROM scanned_sms")
++    suspend fun count(): Int
++
++    /** 重扫未匹配短信：清除没有对应快递记录的已扫标记，下次扫描自动重试 */
++    @Query("DELETE FROM scanned_sms WHERE sms_id NOT IN (SELECT sms_id FROM package_records WHERE sms_id IS NOT NULL)")
++    suspend fun deleteUnmatched()
++
++    @Query("DELETE FROM scanned_sms")
++    suspend fun clearAll()
++}
+diff --git a/app/src/main/java/com/quickpick/data/db/entity/MatchRuleEntity.kt b/app/src/main/java/com/quickpick/data/db/entity/MatchRuleEntity.kt
+new file mode 100644
+index 0000000..8e7c09a
+--- /dev/null
++++ b/app/src/main/java/com/quickpick/data/db/entity/MatchRuleEntity.kt
+@@ -0,0 +1,24 @@
++package com.quickpick.data.db.entity
++
++import androidx.room.*
++
++@Entity(
++    tableName = "match_rules",
++    indices = [Index(value = ["name"])]   // 按名查找（导入同名冲突检测）
++)
++data class MatchRuleEntity(
++    @PrimaryKey(autoGenerate = true) val id: Long = 0,
++    @ColumnInfo(name = "name") val name: String,
++    @ColumnInfo(name = "is_preset") val isPreset: Boolean = false,
++    @ColumnInfo(name = "tracking_prefix") val trackingPrefix: String? = null,
++    @ColumnInfo(name = "tracking_suffix") val trackingSuffix: String? = null,
++    @ColumnInfo(name = "code_prefix") val codePrefix: String? = null,
++    @ColumnInfo(name = "code_suffix") val codeSuffix: String? = null,
++    @ColumnInfo(name = "address_prefix") val addressPrefix: String? = null,
++    @ColumnInfo(name = "address_suffix") val addressSuffix: String? = null,
++    @ColumnInfo(name = "phone_prefix") val phonePrefix: String? = null,
++    @ColumnInfo(name = "phone_suffix") val phoneSuffix: String? = null,
++    @ColumnInfo(name = "sample_sms") val sampleSms: String? = null,
++    @ColumnInfo(name = "created_at") val createdAt: Long = System.currentTimeMillis(),
++    @ColumnInfo(name = "updated_at") val updatedAt: Long = System.currentTimeMillis()
++)
+diff --git a/app/src/main/java/com/quickpick/data/db/entity/PackageRecordEntity.kt b/app/src/main/java/com/quickpick/data/db/entity/PackageRecordEntity.kt
+new file mode 100644
+index 0000000..2078573
+--- /dev/null
++++ b/app/src/main/java/com/quickpick/data/db/entity/PackageRecordEntity.kt
+@@ -0,0 +1,31 @@
++package com.quickpick.data.db.entity
++
++import androidx.room.*
++
++@Entity(
++    tableName = "package_records",
++    foreignKeys = [
++        ForeignKey(
++            entity = MatchRuleEntity::class,
++            parentColumns = ["id"],
++            childColumns = ["rule_id"],
++            onDelete = ForeignKey.SET_NULL   // 删除规则后历史记录保留，引用置空
++        )
++    ],
++    indices = [Index(value = ["sms_timestamp"]), Index(value = ["rule_id"])]
++)
++data class PackageRecordEntity(
++    @PrimaryKey(autoGenerate = true) val id: Long = 0,
++    @ColumnInfo(name = "company_name") val companyName: String,
++    @ColumnInfo(name = "tracking_number") val trackingNumber: String? = null,
++    @ColumnInfo(name = "pickup_code") val pickupCode: String? = null,
++    @ColumnInfo(name = "address") val address: String? = null,
++    @ColumnInfo(name = "phone") val phone: String? = null,
++    @ColumnInfo(name = "sms_body") val smsBody: String,
++    @ColumnInfo(name = "sms_timestamp") val smsTimestamp: Long,
++    @ColumnInfo(name = "is_picked_up") val isPickedUp: Boolean = false,
++    @ColumnInfo(name = "is_incomplete") val isIncomplete: Boolean = false,
++    @ColumnInfo(name = "rule_id") val ruleId: Long? = null,
++    @ColumnInfo(name = "sms_id") val smsId: String? = null,
++    @ColumnInfo(name = "created_at") val createdAt: Long = System.currentTimeMillis()
++)
+diff --git a/app/src/main/java/com/quickpick/data/db/entity/ScannedSmsEntity.kt b/app/src/main/java/com/quickpick/data/db/entity/ScannedSmsEntity.kt
+new file mode 100644
+index 0000000..452dce4
+--- /dev/null
++++ b/app/src/main/java/com/quickpick/data/db/entity/ScannedSmsEntity.kt
+@@ -0,0 +1,13 @@
++package com.quickpick.data.db.entity
++
++import androidx.room.*
++
++@Entity(
++    tableName = "scanned_sms",
++    indices = [Index(value = ["sms_id"], unique = true)]
++)
++data class ScannedSmsEntity(
++    @PrimaryKey(autoGenerate = true) val id: Long = 0,
++    @ColumnInfo(name = "sms_id") val smsId: String,
++    @ColumnInfo(name = "scanned_at") val scannedAt: Long = System.currentTimeMillis()
++)
+diff --git a/app/src/main/java/com/quickpick/data/local/SettingsStore.kt b/app/src/main/java/com/quickpick/data/local/SettingsStore.kt
+new file mode 100644
+index 0000000..f4be670
+--- /dev/null
++++ b/app/src/main/java/com/quickpick/data/local/SettingsStore.kt
+@@ -0,0 +1,36 @@
++package com.quickpick.data.local
++
++import android.content.Context
++import androidx.datastore.preferences.core.booleanPreferencesKey
++import androidx.datastore.preferences.core.edit
++import androidx.datastore.preferences.preferencesDataStore
++import kotlinx.coroutines.flow.Flow
++import kotlinx.coroutines.flow.first
++import kotlinx.coroutines.flow.map
++
++private val Context.dataStore by preferencesDataStore(name = "quickpick_prefs")
++
++/** 轻量偏好存储：权限引导完成标记、预置规则灌入标记 */
++class SettingsStore(private val context: Context) {
++
++    companion object {
++        private val KEY_ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
++        private val KEY_RULES_SEEDED = booleanPreferencesKey("rules_seeded")
++    }
++
++    val onboardingDone: Flow<Boolean> =
++        context.dataStore.data.map { it[KEY_ONBOARDING_DONE] ?: false }
++
++    suspend fun isOnboardingDone(): Boolean = onboardingDone.first()
++
++    suspend fun setOnboardingDone() {
++        context.dataStore.edit { it[KEY_ONBOARDING_DONE] = true }
++    }
++
++    suspend fun isRulesSeeded(): Boolean =
++        context.dataStore.data.map { it[KEY_RULES_SEEDED] ?: false }.first()
++
++    suspend fun setRulesSeeded() {
++        context.dataStore.edit { it[KEY_RULES_SEEDED] = true }
++    }
++}
+diff --git a/app/src/main/java/com/quickpick/data/preset/PresetRules.kt b/app/src/main/java/com/quickpick/data/preset/PresetRules.kt
+new file mode 100644
+index 0000000..8a99554
+--- /dev/null
++++ b/app/src/main/java/com/quickpick/data/preset/PresetRules.kt
+@@ -0,0 +1,48 @@
++package com.quickpick.data.preset
++
++import com.quickpick.data.db.dao.MatchRuleDao
++import com.quickpick.data.db.entity.MatchRuleEntity
++import com.quickpick.data.local.SettingsStore
++
++object PresetRules {
++
++    val all: List<MatchRuleEntity> = listOf(
++        MatchRuleEntity(
++            name = "顺丰速运",
++            isPreset = true,
++            trackingPrefix = "单号",
++            trackingSuffix = "，",
++            codePrefix = "取件码：",
++            codeSuffix = "，",
++            addressPrefix = "到达",
++            addressSuffix = "，",
++            phonePrefix = "电话：",
++            phoneSuffix = "",
++            sampleSms = "【顺丰速运】您的包裹已到达菜鸟驿站(阳光花园店)，取件码：3-2-1088，单号SF1234567890123，请尽快取件。电话：13800001234"
++        ),
++        MatchRuleEntity(
++            name = "京东物流",
++            isPreset = true,
++            trackingPrefix = "订单",
++            trackingSuffix = "已送达",
++            codePrefix = "取货码",
++            codeSuffix = "，",
++            addressPrefix = "送达",
++            addressSuffix = "，",
++            phonePrefix = "联系电话",
++            phoneSuffix = "，",
++            sampleSms = "【京东物流】您的订单4901234567已送达京东便利店(万达店)，取货码8-3-1024，联系电话13800005678，请尽快取件。"
++        )
++    )
++
++    /**
++     * 仅首次启动灌入预置规则。
++     * 判定用 DataStore 标记而非「表是否为空」——否则用户删光规则后下次启动预置会复活，
++     * 「用户可删除预置规则」和「删光规则的空状态」都会被破坏。
++     */
++    suspend fun seedIfNeeded(store: SettingsStore, dao: MatchRuleDao) {
++        if (store.isRulesSeeded()) return
++        all.forEach { dao.insert(it) }
++        store.setRulesSeeded()
++    }
++}
+diff --git a/app/src/main/java/com/quickpick/domain/engine/MatchEngine.kt b/app/src/main/java/com/quickpick/domain/engine/MatchEngine.kt
+new file mode 100644
+index 0000000..cba67bc
+--- /dev/null
++++ b/app/src/main/java/com/quickpick/domain/engine/MatchEngine.kt
+@@ -0,0 +1,67 @@
++package com.quickpick.domain.engine
++
++import com.quickpick.domain.model.ExtractedFields
++import com.quickpick.domain.model.MatchRule
++
++object MatchEngine {
++
++    /**
++     * 用前缀/后缀锚点从短信中提取字段内容。
++     * 找到 prefix → 取其后内容 → 直到 suffix 截止。
++     * 不使用正则，纯 indexOf 定位。
++     */
++    fun extract(smsBody: String, rule: MatchRule): ExtractedFields {
++        return ExtractedFields(
++            companyName = rule.name,
++            trackingNumber = extractField(smsBody, rule.trackingPrefix, rule.trackingSuffix),
++            pickupCode = extractField(smsBody, rule.codePrefix, rule.codeSuffix),
++            address = extractField(smsBody, rule.addressPrefix, rule.addressSuffix),
++            phone = extractField(smsBody, rule.phonePrefix, rule.phoneSuffix)
++        )
++    }
++
++    private fun extractField(text: String, prefix: String?, suffix: String?): String? {
++        if (prefix.isNullOrEmpty()) return null
++
++        val startIndex = text.indexOf(prefix)
++        if (startIndex == -1) return null
++
++        val contentStart = startIndex + prefix.length
++        if (contentStart >= text.length) return null
++
++        val remaining = text.substring(contentStart)
++
++        val raw = if (suffix.isNullOrEmpty()) {
++            // 无后缀：取到文本末尾
++            remaining
++        } else {
++            val endIndex = remaining.indexOf(suffix)
++            // 后缀没找到：取到文本末尾
++            if (endIndex == -1) remaining else remaining.substring(0, endIndex)
++        }
++        // 空串视为未匹配（前缀后紧跟后缀 / 只有空白），否则会污染 matchedCount 优先级比较
++        return raw.trim().ifEmpty { null }
++    }
++
++    /**
++     * 对一条短信跑所有规则，返回匹配字段数最多的结果。
++     * 字段数相同时取规则列表顺序靠前的。
++     */
++    fun findBestMatch(smsBody: String, rules: List<MatchRule>): Pair<MatchRule, ExtractedFields>? {
++        var best: Pair<MatchRule, ExtractedFields>? = null
++
++        for (rule in rules) {
++            if (!rule.hasAnyField) continue
++
++            val fields = extract(smsBody, rule)
++            if (!fields.isPickupRelated) continue
++
++            val current = best
++            if (current == null || fields.matchedCount > current.second.matchedCount) {
++                best = rule to fields
++            }
++        }
++
++        return best
++    }
++}
+diff --git a/app/src/main/java/com/quickpick/domain/model/ExtractedFields.kt b/app/src/main/java/com/quickpick/domain/model/ExtractedFields.kt
+new file mode 100644
+index 0000000..4396bdc
+--- /dev/null
++++ b/app/src/main/java/com/quickpick/domain/model/ExtractedFields.kt
+@@ -0,0 +1,22 @@
++package com.quickpick.domain.model
++
++data class ExtractedFields(
++    val companyName: String? = null,
++    val trackingNumber: String? = null,
++    val pickupCode: String? = null,
++    val address: String? = null,
++    val phone: String? = null
++) {
++    /** 成功提取的字段数 */
++    val matchedCount: Int
++        get() = listOfNotNull(
++            trackingNumber, pickupCode, address, phone
++        ).size
++
++    /** 是否至少有一个取件相关字段（取件码或地址） */
++    val isPickupRelated: Boolean
++        get() = pickupCode != null || address != null
++}
++// 注意：没有 isIncomplete 属性。「不完整」由调用方按规则口径计算：
++// isIncomplete = matchedCount < rule.configuredFieldCount（规则配置了但没提取到才算不完整；
++// 电话是可选字段，不能按固定 4 个字段硬编码，否则没电话的快递永远显示"不完整"）
+diff --git a/app/src/main/java/com/quickpick/domain/model/MatchRule.kt b/app/src/main/java/com/quickpick/domain/model/MatchRule.kt
+new file mode 100644
+index 0000000..3bd5199
+--- /dev/null
++++ b/app/src/main/java/com/quickpick/domain/model/MatchRule.kt
+@@ -0,0 +1,29 @@
++package com.quickpick.domain.model
++
++data class MatchRule(
++    val id: Long = 0,
++    val name: String,
++    val isPreset: Boolean = false,
++    val trackingPrefix: String? = null,
++    val trackingSuffix: String? = null,
++    val codePrefix: String? = null,
++    val codeSuffix: String? = null,
++    val addressPrefix: String? = null,
++    val addressSuffix: String? = null,
++    val phonePrefix: String? = null,
++    val phoneSuffix: String? = null,
++    val sampleSms: String? = null
++) {
++    /** 有配置锚点的字段数 */
++    val configuredFieldCount: Int
++        get() = listOf(
++            trackingPrefix != null || trackingSuffix != null,
++            codePrefix != null || codeSuffix != null,
++            addressPrefix != null || addressSuffix != null,
++            phonePrefix != null || phoneSuffix != null
++        ).count { it }
++
++    /** 是否有任何字段配置了锚点 */
++    val hasAnyField: Boolean
++        get() = configuredFieldCount > 0
++}
+diff --git a/app/src/main/java/com/quickpick/domain/model/PackageRecord.kt b/app/src/main/java/com/quickpick/domain/model/PackageRecord.kt
+new file mode 100644
+index 0000000..990f86c
+--- /dev/null
++++ b/app/src/main/java/com/quickpick/domain/model/PackageRecord.kt
+@@ -0,0 +1,16 @@
++package com.quickpick.domain.model
++
++data class PackageRecord(
++    val id: Long = 0,
++    val companyName: String,
++    val trackingNumber: String? = null,
++    val pickupCode: String? = null,
++    val address: String? = null,
++    val phone: String? = null,
++    val smsBody: String,
++    val smsTimestamp: Long,
++    val isPickedUp: Boolean = false,
++    val isIncomplete: Boolean = false,
++    val ruleId: Long? = null,
++    val smsId: String? = null
++)
+diff --git a/app/src/main/java/com/quickpick/ui/theme/Color.kt b/app/src/main/java/com/quickpick/ui/theme/Color.kt
+new file mode 100644
+index 0000000..d0d28ed
+--- /dev/null
++++ b/app/src/main/java/com/quickpick/ui/theme/Color.kt
+@@ -0,0 +1,56 @@
++package com.quickpick.ui.theme
++
++import androidx.compose.ui.graphics.Color
++
++// 主色调：豆绿
++val Primary = Color(0xFF6AB37B)
++val PrimaryLight = Color(0xFFA8D5B0)
++val PrimarySoft = Color(0xFFE9F3EB) // 10% 豆绿叠白的等效实体色（容器色必须实体，避免透出底层背景）
++
++// 背景
++val Background = Color(0xFFF9F9F6)
++val Surface = Color(0xFFFFFFFF)
++val SurfaceDone = Color(0xFFF5F5F5)
++val InputBackground = Color(0xFFF5F5F5)
++
++// 文字（从不用纯黑）
++val TextPrimary = Color(0xFF424242)
++val TextSecondary = Color(0xFF757575)
++val TextTertiary = Color(0xFF9E9E9E)
++
++// 语义色
++val Pending = Color(0xFFFFB76B)
++val Done = Color(0xFFBDBDBD)
++val Danger = Color(0xFFEF5350)
++
++// 分割线
++val Divider = Color(0xFFEEEEEE)
++
++// 快递公司品牌色（小面积点缀）
++object BrandColors {
++    val SF = Color(0xFF000000)        // 顺丰
++    val JD = Color(0xFFE2231A)        // 京东
++    val JT = Color(0xFFE50012)        // 极兔
++    val ZTO = Color(0xFF006CB7)       // 中通
++    val YTO = Color(0xFF662D91)       // 圆通
++    val YUNDA = Color(0xFFFFCC00)     // 韵达
++    val STO = Color(0xFFFF6600)       // 申通
++    val EMS = Color(0xFF006633)       // 邮政
++    val DEPPON = Color(0xFF0056D2)    // 德邦
++    val CAINIAO = Color(0xFF0066FF)   // 菜鸟
++    val DEFAULT = Primary
++
++    fun forName(name: String): Color = when {
++        name.contains("顺丰") -> SF
++        name.contains("京东") -> JD
++        name.contains("极兔") -> JT
++        name.contains("中通") -> ZTO
++        name.contains("圆通") -> YTO
++        name.contains("韵达") -> YUNDA
++        name.contains("申通") -> STO
++        name.contains("邮政") || name.contains("EMS") -> EMS
++        name.contains("德邦") -> DEPPON
++        name.contains("菜鸟") -> CAINIAO
++        else -> DEFAULT
++    }
++}
+diff --git a/app/src/main/java/com/quickpick/ui/theme/Shape.kt b/app/src/main/java/com/quickpick/ui/theme/Shape.kt
+new file mode 100644
+index 0000000..55c3245
+--- /dev/null
++++ b/app/src/main/java/com/quickpick/ui/theme/Shape.kt
+@@ -0,0 +1,12 @@
++package com.quickpick.ui.theme
++
++import androidx.compose.foundation.shape.RoundedCornerShape
++import androidx.compose.material3.Shapes
++import androidx.compose.ui.unit.dp
++
++val AppShapes = Shapes(
++    small = RoundedCornerShape(12.dp),   // 小组件（分词块单独用 8dp，见 TokenChip）
++    medium = RoundedCornerShape(16.dp),  // 卡片
++    large = RoundedCornerShape(16.dp),   // 按钮、输入框
++    extraLarge = RoundedCornerShape(20.dp) // 弹窗
++)
+diff --git a/app/src/main/java/com/quickpick/ui/theme/Theme.kt b/app/src/main/java/com/quickpick/ui/theme/Theme.kt
+new file mode 100644
+index 0000000..15a9f68
+--- /dev/null
++++ b/app/src/main/java/com/quickpick/ui/theme/Theme.kt
+@@ -0,0 +1,45 @@
++package com.quickpick.ui.theme
++
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.lightColorScheme
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.graphics.Color
++
++// 覆盖完整槽位，杜绝 M3 默认紫色（弹窗容器 surfaceContainerHigh 等）泄漏
++private val LightColorScheme = lightColorScheme(
++    primary = Primary,
++    onPrimary = Color.White,
++    primaryContainer = PrimarySoft,
++    onPrimaryContainer = Primary,
++    secondary = Primary,
++    onSecondary = Color.White,
++    secondaryContainer = PrimarySoft,   // 底部导航选中胶囊
++    onSecondaryContainer = Primary,
++    tertiary = PrimaryLight,
++    onTertiary = TextPrimary,
++    background = Background,
++    onBackground = TextPrimary,
++    surface = Surface,
++    onSurface = TextPrimary,
++    surfaceVariant = InputBackground,   // 输入框/浅灰底
++    onSurfaceVariant = TextSecondary,
++    surfaceContainerLowest = Surface,
++    surfaceContainerLow = Surface,
++    surfaceContainer = Surface,
++    surfaceContainerHigh = Surface,     // AlertDialog 默认容器
++    surfaceContainerHighest = SurfaceDone,
++    error = Danger,                     // 删除操作专用
++    onError = Color.White,
++    outline = Divider,
++    outlineVariant = Divider
++)
++
++@Composable
++fun QuickPickTheme(content: @Composable () -> Unit) {
++    MaterialTheme(
++        colorScheme = LightColorScheme,
++        typography = AppTypography,
++        shapes = AppShapes,
++        content = content
++    )
++}
+diff --git a/app/src/main/java/com/quickpick/ui/theme/Type.kt b/app/src/main/java/com/quickpick/ui/theme/Type.kt
+new file mode 100644
+index 0000000..fd3f9db
+--- /dev/null
++++ b/app/src/main/java/com/quickpick/ui/theme/Type.kt
+@@ -0,0 +1,58 @@
++package com.quickpick.ui.theme
++
++import androidx.compose.material3.Typography
++import androidx.compose.ui.text.TextStyle
++import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.unit.sp
++
++val AppTypography = Typography(
++    // 取件码 — 页面最大最醒目的数字
++    headlineLarge = TextStyle(
++        fontSize = 28.sp,
++        fontWeight = FontWeight.Bold,
++        letterSpacing = 1.sp,
++        color = Primary
++    ),
++    // 页面标题
++    headlineMedium = TextStyle(
++        fontSize = 28.sp,
++        fontWeight = FontWeight.Bold,
++        color = TextPrimary
++    ),
++    // 分组标题
++    titleLarge = TextStyle(
++        fontSize = 18.sp,
++        fontWeight = FontWeight.Medium,
++        color = TextPrimary
++    ),
++    // 公司名
++    titleMedium = TextStyle(
++        fontSize = 16.sp,
++        fontWeight = FontWeight.Medium,
++        color = TextPrimary
++    ),
++    // 正文
++    bodyLarge = TextStyle(
++        fontSize = 15.sp,
++        fontWeight = FontWeight.Normal,
++        color = TextPrimary
++    ),
++    // 辅助字段
++    bodyMedium = TextStyle(
++        fontSize = 14.sp,
++        fontWeight = FontWeight.Normal,
++        color = TextSecondary
++    ),
++    // 小字 / 标签 / 时间
++    bodySmall = TextStyle(
++        fontSize = 12.sp,
++        fontWeight = FontWeight.Normal,
++        color = TextTertiary
++    ),
++    // 按钮文字
++    labelLarge = TextStyle(
++        fontSize = 15.sp,
++        fontWeight = FontWeight.SemiBold,
++        color = TextPrimary
++    )
++)
+diff --git a/app/src/main/res/drawable/ic_launcher_foreground.xml b/app/src/main/res/drawable/ic_launcher_foreground.xml
+new file mode 100644
+index 0000000..7590a55
+--- /dev/null
++++ b/app/src/main/res/drawable/ic_launcher_foreground.xml
+@@ -0,0 +1,19 @@
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="108dp" android:height="108dp"
++    android:viewportWidth="108" android:viewportHeight="108">
++    <!-- 圆润小包裹身体 -->
++    <path
++        android:fillColor="#FFFFFF"
++        android:pathData="M43,40 h22 a9,9 0 0 1 9,9 v14 a9,9 0 0 1 -9,9 h-22 a9,9 0 0 1 -9,-9 v-14 a9,9 0 0 1 9,-9 z"/>
++    <!-- 顶部胶带 -->
++    <path
++        android:fillColor="#F9F9F6"
++        android:pathData="M51,40 h6 v10 l-3,-3 l-3,3 z"/>
++    <!-- 双眼 + 微笑 -->
++    <path android:fillColor="#6AB37B" android:pathData="M47,56 m-2,0 a2,2 0 1,1 4,0 a2,2 0 1,1 -4,0"/>
++    <path android:fillColor="#6AB37B" android:pathData="M61,56 m-2,0 a2,2 0 1,1 4,0 a2,2 0 1,1 -4,0"/>
++    <path
++        android:strokeColor="#6AB37B" android:strokeWidth="2"
++        android:strokeLineCap="round" android:fillColor="#00000000"
++        android:pathData="M49,62 q5,4 10,0"/>
++</vector>
+diff --git a/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml b/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+new file mode 100644
+index 0000000..5ed0a2d
+--- /dev/null
++++ b/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+@@ -0,0 +1,5 @@
++<?xml version="1.0" encoding="utf-8"?>
++<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
++    <background android:drawable="@color/ic_launcher_background"/>
++    <foreground android:drawable="@drawable/ic_launcher_foreground"/>
++</adaptive-icon>
+diff --git a/app/src/main/res/values/colors.xml b/app/src/main/res/values/colors.xml
+new file mode 100644
+index 0000000..44479cd
+--- /dev/null
++++ b/app/src/main/res/values/colors.xml
+@@ -0,0 +1,5 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <color name="bg_base">#F9F9F6</color>
++    <color name="ic_launcher_background">#6AB37B</color>
++</resources>
+diff --git a/app/src/main/res/values/themes.xml b/app/src/main/res/values/themes.xml
+new file mode 100644
+index 0000000..7524d15
+--- /dev/null
++++ b/app/src/main/res/values/themes.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <style name="Theme.QuickPick" parent="android:Theme.Material.Light.NoActionBar">
++        <item name="android:windowBackground">@color/bg_base</item>
++    </style>
++</resources>
+diff --git a/build.gradle.kts b/build.gradle.kts
+new file mode 100644
+index 0000000..76781df
+--- /dev/null
++++ b/build.gradle.kts
+@@ -0,0 +1,8 @@
++// build.gradle.kts
++plugins {
++    id("com.android.application") version "8.13.0" apply false
++    id("org.jetbrains.kotlin.android") version "2.3.20" apply false
++    // Kotlin 2.x 起 Compose 编译器独立为插件，与 Kotlin 版本一一对应
++    id("org.jetbrains.kotlin.plugin.compose") version "2.3.20" apply false
++    id("com.google.devtools.ksp") version "2.3.12" apply false
++}
+diff --git a/gradle.properties b/gradle.properties
+new file mode 100644
+index 0000000..c1c16ee
+--- /dev/null
++++ b/gradle.properties
+@@ -0,0 +1,8 @@
++# gradle.properties
++org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
++org.gradle.parallel=true
++org.gradle.caching=true
++# 必须开启，否则 AGP 检测到 androidx 依赖直接报错
++android.useAndroidX=true
++android.nonTransitiveRClass=true
++kotlin.code.style=official
+diff --git a/gradle/wrapper/gradle-wrapper.jar b/gradle/wrapper/gradle-wrapper.jar
+new file mode 100644
+index 0000000..1b33c55
+Binary files /dev/null and b/gradle/wrapper/gradle-wrapper.jar differ
+diff --git a/gradle/wrapper/gradle-wrapper.properties b/gradle/wrapper/gradle-wrapper.properties
+new file mode 100644
+index 0000000..d4081da
+--- /dev/null
++++ b/gradle/wrapper/gradle-wrapper.properties
+@@ -0,0 +1,7 @@
++distributionBase=GRADLE_USER_HOME
++distributionPath=wrapper/dists
++distributionUrl=https\://services.gradle.org/distributions/gradle-8.14.3-bin.zip
++networkTimeout=10000
++validateDistributionUrl=true
++zipStoreBase=GRADLE_USER_HOME
++zipStorePath=wrapper/dists
+diff --git a/gradlew b/gradlew
+new file mode 100755
+index 0000000..23d15a9
+--- /dev/null
++++ b/gradlew
+@@ -0,0 +1,251 @@
++#!/bin/sh
++
++#
++# Copyright © 2015-2021 the original authors.
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++#      https://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++#
++# SPDX-License-Identifier: Apache-2.0
++#
++
++##############################################################################
++#
++#   Gradle start up script for POSIX generated by Gradle.
++#
++#   Important for running:
++#
++#   (1) You need a POSIX-compliant shell to run this script. If your /bin/sh is
++#       noncompliant, but you have some other compliant shell such as ksh or
++#       bash, then to run this script, type that shell name before the whole
++#       command line, like:
++#
++#           ksh Gradle
++#
++#       Busybox and similar reduced shells will NOT work, because this script
++#       requires all of these POSIX shell features:
++#         * functions;
++#         * expansions «$var», «${var}», «${var:-default}», «${var+SET}»,
++#           «${var#prefix}», «${var%suffix}», and «$( cmd )»;
++#         * compound commands having a testable exit status, especially «case»;
++#         * various built-in commands including «command», «set», and «ulimit».
++#
++#   Important for patching:
++#
++#   (2) This script targets any POSIX shell, so it avoids extensions provided
++#       by Bash, Ksh, etc; in particular arrays are avoided.
++#
++#       The "traditional" practice of packing multiple parameters into a
++#       space-separated string is a well documented source of bugs and security
++#       problems, so this is (mostly) avoided, by progressively accumulating
++#       options in "$@", and eventually passing that to Java.
++#
++#       Where the inherited environment variables (DEFAULT_JVM_OPTS, JAVA_OPTS,
++#       and GRADLE_OPTS) rely on word-splitting, this is performed explicitly;
++#       see the in-line comments for details.
++#
++#       There are tweaks for specific operating systems such as AIX, CygWin,
++#       Darwin, MinGW, and NonStop.
++#
++#   (3) This script is generated from the Groovy template
++#       https://github.com/gradle/gradle/blob/HEAD/platforms/jvm/plugins-application/src/main/resources/org/gradle/api/internal/plugins/unixStartScript.txt
++#       within the Gradle project.
++#
++#       You can find Gradle at https://github.com/gradle/gradle/.
++#
++##############################################################################
++
++# Attempt to set APP_HOME
++
++# Resolve links: $0 may be a link
++app_path=$0
++
++# Need this for daisy-chained symlinks.
++while
++    APP_HOME=${app_path%"${app_path##*/}"}  # leaves a trailing /; empty if no leading path
++    [ -h "$app_path" ]
++do
++    ls=$( ls -ld "$app_path" )
++    link=${ls#*' -> '}
++    case $link in             #(
++      /*)   app_path=$link ;; #(
++      *)    app_path=$APP_HOME$link ;;
++    esac
++done
++
++# This is normally unused
++# shellcheck disable=SC2034
++APP_BASE_NAME=${0##*/}
++# Discard cd standard output in case $CDPATH is set (https://github.com/gradle/gradle/issues/25036)
++APP_HOME=$( cd -P "${APP_HOME:-./}" > /dev/null && printf '%s\n' "$PWD" ) || exit
++
++# Use the maximum available, or set MAX_FD != -1 to use that value.
++MAX_FD=maximum
++
++warn () {
++    echo "$*"
++} >&2
++
++die () {
++    echo
++    echo "$*"
++    echo
++    exit 1
++} >&2
++
++# OS specific support (must be 'true' or 'false').
++cygwin=false
++msys=false
++darwin=false
++nonstop=false
++case "$( uname )" in                #(
++  CYGWIN* )         cygwin=true  ;; #(
++  Darwin* )         darwin=true  ;; #(
++  MSYS* | MINGW* )  msys=true    ;; #(
++  NONSTOP* )        nonstop=true ;;
++esac
++
++CLASSPATH="\\\"\\\""
++
++
++# Determine the Java command to use to start the JVM.
++if [ -n "$JAVA_HOME" ] ; then
++    if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
++        # IBM's JDK on AIX uses strange locations for the executables
++        JAVACMD=$JAVA_HOME/jre/sh/java
++    else
++        JAVACMD=$JAVA_HOME/bin/java
++    fi
++    if [ ! -x "$JAVACMD" ] ; then
++        die "ERROR: JAVA_HOME is set to an invalid directory: $JAVA_HOME
++
++Please set the JAVA_HOME variable in your environment to match the
++location of your Java installation."
++    fi
++else
++    JAVACMD=java
++    if ! command -v java >/dev/null 2>&1
++    then
++        die "ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH.
++
++Please set the JAVA_HOME variable in your environment to match the
++location of your Java installation."
++    fi
++fi
++
++# Increase the maximum file descriptors if we can.
++if ! "$cygwin" && ! "$darwin" && ! "$nonstop" ; then
++    case $MAX_FD in #(
++      max*)
++        # In POSIX sh, ulimit -H is undefined. That's why the result is checked to see if it worked.
++        # shellcheck disable=SC2039,SC3045
++        MAX_FD=$( ulimit -H -n ) ||
++            warn "Could not query maximum file descriptor limit"
++    esac
++    case $MAX_FD in  #(
++      '' | soft) :;; #(
++      *)
++        # In POSIX sh, ulimit -n is undefined. That's why the result is checked to see if it worked.
++        # shellcheck disable=SC2039,SC3045
++        ulimit -n "$MAX_FD" ||
++            warn "Could not set maximum file descriptor limit to $MAX_FD"
++    esac
++fi
++
++# Collect all arguments for the java command, stacking in reverse order:
++#   * args from the command line
++#   * the main class name
++#   * -classpath
++#   * -D...appname settings
++#   * --module-path (only if needed)
++#   * DEFAULT_JVM_OPTS, JAVA_OPTS, and GRADLE_OPTS environment variables.
++
++# For Cygwin or MSYS, switch paths to Windows format before running java
++if "$cygwin" || "$msys" ; then
++    APP_HOME=$( cygpath --path --mixed "$APP_HOME" )
++    CLASSPATH=$( cygpath --path --mixed "$CLASSPATH" )
++
++    JAVACMD=$( cygpath --unix "$JAVACMD" )
++
++    # Now convert the arguments - kludge to limit ourselves to /bin/sh
++    for arg do
++        if
++            case $arg in                                #(
++              -*)   false ;;                            # don't mess with options #(
++              /?*)  t=${arg#/} t=/${t%%/*}              # looks like a POSIX filepath
++                    [ -e "$t" ] ;;                      #(
++              *)    false ;;
++            esac
++        then
++            arg=$( cygpath --path --ignore --mixed "$arg" )
++        fi
++        # Roll the args list around exactly as many times as the number of
++        # args, so each arg winds up back in the position where it started, but
++        # possibly modified.
++        #
++        # NB: a `for` loop captures its iteration list before it begins, so
++        # changing the positional parameters here affects neither the number of
++        # iterations, nor the values presented in `arg`.
++        shift                   # remove old arg
++        set -- "$@" "$arg"      # push replacement arg
++    done
++fi
++
++
++# Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
++DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
++
++# Collect all arguments for the java command:
++#   * DEFAULT_JVM_OPTS, JAVA_OPTS, and optsEnvironmentVar are not allowed to contain shell fragments,
++#     and any embedded shellness will be escaped.
++#   * For example: A user cannot expect ${Hostname} to be expanded, as it is an environment variable and will be
++#     treated as '${Hostname}' itself on the command line.
++
++set -- \
++        "-Dorg.gradle.appname=$APP_BASE_NAME" \
++        -classpath "$CLASSPATH" \
++        -jar "$APP_HOME/gradle/wrapper/gradle-wrapper.jar" \
++        "$@"
++
++# Stop when "xargs" is not available.
++if ! command -v xargs >/dev/null 2>&1
++then
++    die "xargs is not available"
++fi
++
++# Use "xargs" to parse quoted args.
++#
++# With -n1 it outputs one arg per line, with the quotes and backslashes removed.
++#
++# In Bash we could simply go:
++#
++#   readarray ARGS < <( xargs -n1 <<<"$var" ) &&
++#   set -- "${ARGS[@]}" "$@"
++#
++# but POSIX shell has neither arrays nor command substitution, so instead we
++# post-process each arg (as a line of input to sed) to backslash-escape any
++# character that might be a shell metacharacter, then use eval to reverse
++# that process (while maintaining the separation between arguments), and wrap
++# the whole thing up as a single "set" statement.
++#
++# This will of course break if any of these variables contains a newline or
++# an unmatched quote.
++#
++
++eval "set -- $(
++        printf '%s\n' "$DEFAULT_JVM_OPTS $JAVA_OPTS $GRADLE_OPTS" |
++        xargs -n1 |
++        sed ' s~[^-[:alnum:]+,./:=@_]~\\&~g; ' |
++        tr '\n' ' '
++    )" '"$@"'
++
++exec "$JAVACMD" "$@"
+diff --git a/gradlew.bat b/gradlew.bat
+new file mode 100644
+index 0000000..5eed7ee
+--- /dev/null
++++ b/gradlew.bat
+@@ -0,0 +1,94 @@
++@rem
++@rem Copyright 2015 the original author or authors.
++@rem
++@rem Licensed under the Apache License, Version 2.0 (the "License");
++@rem you may not use this file except in compliance with the License.
++@rem You may obtain a copy of the License at
++@rem
++@rem      https://www.apache.org/licenses/LICENSE-2.0
++@rem
++@rem Unless required by applicable law or agreed to in writing, software
++@rem distributed under the License is distributed on an "AS IS" BASIS,
++@rem WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++@rem See the License for the specific language governing permissions and
++@rem limitations under the License.
++@rem
++@rem SPDX-License-Identifier: Apache-2.0
++@rem
++
++@if "%DEBUG%"=="" @echo off
++@rem ##########################################################################
++@rem
++@rem  Gradle startup script for Windows
++@rem
++@rem ##########################################################################
++
++@rem Set local scope for the variables with windows NT shell
++if "%OS%"=="Windows_NT" setlocal
++
++set DIRNAME=%~dp0
++if "%DIRNAME%"=="" set DIRNAME=.
++@rem This is normally unused
++set APP_BASE_NAME=%~n0
++set APP_HOME=%DIRNAME%
++
++@rem Resolve any "." and ".." in APP_HOME to make it shorter.
++for %%i in ("%APP_HOME%") do set APP_HOME=%%~fi
++
++@rem Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
++set DEFAULT_JVM_OPTS="-Xmx64m" "-Xms64m"
++
++@rem Find java.exe
++if defined JAVA_HOME goto findJavaFromJavaHome
++
++set JAVA_EXE=java.exe
++%JAVA_EXE% -version >NUL 2>&1
++if %ERRORLEVEL% equ 0 goto execute
++
++echo. 1>&2
++echo ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH. 1>&2
++echo. 1>&2
++echo Please set the JAVA_HOME variable in your environment to match the 1>&2
++echo location of your Java installation. 1>&2
++
++goto fail
++
++:findJavaFromJavaHome
++set JAVA_HOME=%JAVA_HOME:"=%
++set JAVA_EXE=%JAVA_HOME%/bin/java.exe
++
++if exist "%JAVA_EXE%" goto execute
++
++echo. 1>&2
++echo ERROR: JAVA_HOME is set to an invalid directory: %JAVA_HOME% 1>&2
++echo. 1>&2
++echo Please set the JAVA_HOME variable in your environment to match the 1>&2
++echo location of your Java installation. 1>&2
++
++goto fail
++
++:execute
++@rem Setup the command line
++
++set CLASSPATH=
++
++
++@rem Execute Gradle
++"%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% "-Dorg.gradle.appname=%APP_BASE_NAME%" -classpath "%CLASSPATH%" -jar "%APP_HOME%\gradle\wrapper\gradle-wrapper.jar" %*
++
++:end
++@rem End local scope for the variables with windows NT shell
++if %ERRORLEVEL% equ 0 goto mainEnd
++
++:fail
++rem Set variable GRADLE_EXIT_CONSOLE if you need the _script_ return code instead of
++rem the _cmd.exe /c_ return code!
++set EXIT_CODE=%ERRORLEVEL%
++if %EXIT_CODE% equ 0 set EXIT_CODE=1
++if not ""=="%GRADLE_EXIT_CONSOLE%" exit %EXIT_CODE%
++exit /b %EXIT_CODE%
++
++:mainEnd
++if "%OS%"=="Windows_NT" endlocal
++
++:omega
+diff --git a/settings.gradle.kts b/settings.gradle.kts
+new file mode 100644
+index 0000000..ab3119f
+--- /dev/null
++++ b/settings.gradle.kts
+@@ -0,0 +1,19 @@
++// settings.gradle.kts
++pluginManagement {
++    repositories {
++        google()
++        mavenCentral()
++        gradlePluginPortal()
++    }
++}
++
++// 正确的 DSL 是 dependencyResolutionManagement（初版误写 dependencyResolution，配置阶段直接失败）
++dependencyResolutionManagement {
++    repositories {
++        google()
++        mavenCentral()
++    }
++}
++
++rootProject.name = "QuickPick"
++include(":app")
