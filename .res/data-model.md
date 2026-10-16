@@ -35,7 +35,7 @@
 | sms_timestamp | INTEGER | NOT NULL | 短信接收时间(ms) |
 | is_picked_up | INTEGER | NOT NULL, DEFAULT 0 | 0=未取, 1=已取 |
 | is_incomplete | INTEGER | NOT NULL, DEFAULT 0 | 0=完整, 1=字段不全 |
-| rule_id | INTEGER | FK → match_rules.id | 匹配的规则 ID |
+| rule_id | INTEGER | NULLABLE, FK → match_rules.id ON DELETE SET NULL | 匹配的规则 ID |
 | sms_id | TEXT | NULLABLE | 系统短信 ID（去重用） |
 | created_at | INTEGER | NOT NULL | 记录创建时间(ms) |
 

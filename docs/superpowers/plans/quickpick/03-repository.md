@@ -1,0 +1,390 @@
+# Phase 3：Repository 层 + 工具（三个仓库 + SmsReader + JsonExporter）
+
+> 所属轮次：第 2 轮 ｜ 前置：Phase 2
+> 本文档为可执行清单：按 Task 顺序照做即可，每个 Step 含完整代码。
+
+---
+
+## Phase 3: Repository 层
+
+### Task 3.1: 创建 RuleRepository
+
+**Files:**
+- Create: `app/src/main/java/com/quickpick/data/repository/RuleRepository.kt`
+
+- [ ] **Step 1: 创建 RuleRepository.kt**
+
+```kotlin
+package com.quickpick.data.repository
+
+import com.quickpick.data.db.dao.MatchRuleDao
+import com.quickpick.data.db.entity.MatchRuleEntity
+import com.quickpick.domain.model.MatchRule
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
+class RuleRepository(private val dao: MatchRuleDao) {
+
+    fun observeAll(): Flow<List<MatchRule>> =
+        dao.observeAll().map { entities -> entities.map { it.toDomain() } }
+
+    suspend fun getAll(): List<MatchRule> =
+        dao.getAll().map { it.toDomain() }
+
+    suspend fun getById(id: Long): MatchRule? =
+        dao.getById(id)?.toDomain()
+
+    /** 导入时的同名冲突检测 */
+    suspend fun getByName(name: String): List<MatchRule> =
+        dao.getByName(name).map { it.toDomain() }
+
+    suspend fun insert(rule: MatchRule): Long =
+        dao.insert(rule.toEntity())
+
+    /**
+     * 更新规则。必须先读原记录：保留 isPreset（编辑预置规则不能降级成自定义）
+     * 和 createdAt（创建时间不可被更新篡改），只刷新 updatedAt。
+     */
+    suspend fun update(rule: MatchRule) {
+        val origin = dao.getById(rule.id) ?: return
+        dao.update(
+            rule.toEntity(isPreset = origin.isPreset)
+                .copy(createdAt = origin.createdAt, updatedAt = System.currentTimeMillis())
+        )
+    }
+
+    suspend fun deleteById(id: Long) = dao.deleteById(id)
+
+    private fun MatchRuleEntity.toDomain() = MatchRule(
+        id = id, name = name, isPreset = isPreset,
+        trackingPrefix = trackingPrefix, trackingSuffix = trackingSuffix,
+        codePrefix = codePrefix, codeSuffix = codeSuffix,
+        addressPrefix = addressPrefix, addressSuffix = addressSuffix,
+        phonePrefix = phonePrefix, phoneSuffix = phoneSuffix,
+        sampleSms = sampleSms
+    )
+
+    private fun MatchRule.toEntity(isPreset: Boolean = this.isPreset) = MatchRuleEntity(
+        id = id, name = name, isPreset = isPreset,
+        trackingPrefix = trackingPrefix, trackingSuffix = trackingSuffix,
+        codePrefix = codePrefix, codeSuffix = codeSuffix,
+        addressPrefix = addressPrefix, addressSuffix = addressSuffix,
+        phonePrefix = phonePrefix, phoneSuffix = phoneSuffix,
+        sampleSms = sampleSms,
+        createdAt = System.currentTimeMillis(),
+        updatedAt = System.currentTimeMillis()
+    )
+}
+```
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add app/src/main/java/com/quickpick/data/repository/RuleRepository.kt && git commit -m "feat: add RuleRepository"
+```
+
+---
+
+### Task 3.2: 创建 PackageRepository 和 SmsRepository
+
+**Files:**
+- Create: `app/src/main/java/com/quickpick/data/repository/PackageRepository.kt`
+- Create: `app/src/main/java/com/quickpick/data/repository/SmsRepository.kt`
+
+- [ ] **Step 1: 创建 PackageRepository.kt**
+
+```kotlin
+package com.quickpick.data.repository
+
+import com.quickpick.data.db.dao.PackageRecordDao
+import com.quickpick.data.db.entity.PackageRecordEntity
+import com.quickpick.domain.model.PackageRecord
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
+class PackageRepository(private val dao: PackageRecordDao) {
+
+    fun observeAll(): Flow<List<PackageRecord>> =
+        dao.observeAll().map { entities -> entities.map { it.toDomain() } }
+
+    fun observeUnpickedCount(): Flow<Int> = dao.observeUnpickedCount()
+
+    /** 标记已取/未取：专用 UPDATE，不动 created_at 等其他字段 */
+    suspend fun setPickedUp(id: Long, picked: Boolean) = dao.updatePickedUp(id, picked)
+
+    suspend fun markAllPickedUp() = dao.markAllPickedUp()
+
+    suspend fun markDayPickedUp(dateMs: Long) = dao.markDayPickedUp(dateMs)
+
+    /**
+     * 扫描入库（含去重与换柜覆盖，对应 edge-cases 五）：
+     * - 同日同单号且取件码/地址一致 → 重复通知，跳过
+     * - 同日同单号但取件码不同 → 同包裹换柜的新通知，覆盖旧记录（保留原 id 和创建时间）
+     * - 其余 → 插入新记录
+     */
+    suspend fun insertFromSms(record: PackageRecord) {
+        val tracking = record.trackingNumber
+        if (!tracking.isNullOrEmpty()) {
+            val existing = dao.findByTrackingAndDate(tracking, record.smsTimestamp)
+            if (existing != null) {
+                if (existing.pickupCode == record.pickupCode && existing.address == record.address) {
+                    return  // 完全重复，忽略
+                }
+                // 全量重扫按时间倒序处理，旧短信后到——不许用旧取件码覆盖新记录
+                if (existing.smsTimestamp >= record.smsTimestamp) return
+                dao.update(record.toEntity().copy(id = existing.id, createdAt = existing.createdAt))
+                return
+            }
+        }
+        dao.insert(record.toEntity())
+    }
+
+    private fun PackageRecordEntity.toDomain() = PackageRecord(
+        id = id, companyName = companyName,
+        trackingNumber = trackingNumber, pickupCode = pickupCode,
+        address = address, phone = phone,
+        smsBody = smsBody, smsTimestamp = smsTimestamp,
+        isPickedUp = isPickedUp, isIncomplete = isIncomplete,
+        ruleId = ruleId, smsId = smsId
+    )
+
+    private fun PackageRecord.toEntity() = PackageRecordEntity(
+        id = id, companyName = companyName,
+        trackingNumber = trackingNumber, pickupCode = pickupCode,
+        address = address, phone = phone,
+        smsBody = smsBody, smsTimestamp = smsTimestamp,
+        isPickedUp = isPickedUp, isIncomplete = isIncomplete,
+        ruleId = ruleId, smsId = smsId
+    )
+}
+```
+
+- [ ] **Step 2: 创建 SmsRepository.kt**
+
+```kotlin
+package com.quickpick.data.repository
+
+import com.quickpick.data.db.dao.ScannedSmsDao
+import com.quickpick.data.db.entity.ScannedSmsEntity
+
+class SmsRepository(private val dao: ScannedSmsDao) {
+
+    suspend fun isScanned(smsId: String): Boolean = dao.exists(smsId)
+
+    suspend fun markScanned(smsId: String) =
+        dao.insert(ScannedSmsEntity(smsId = smsId))
+
+    /** 已扫描总数（用于区分空状态：收件箱空 vs 扫了但没匹配到） */
+    suspend fun scannedCount(): Int = dao.count()
+
+    /** 清除「未匹配短信」的已扫标记，下次扫描自动重试（规则更新后用） */
+    suspend fun deleteUnmatched() = dao.deleteUnmatched()
+
+    /** 全量重扫前清空 */
+    suspend fun clearScanned() = dao.clearAll()
+}
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add app/src/main/java/com/quickpick/data/repository/ && git commit -m "feat: add PackageRepository and SmsRepository"
+```
+
+---
+
+### Task 3.3: 创建短信读取工具
+
+**Files:**
+- Create: `app/src/main/java/com/quickpick/util/SmsReader.kt`
+
+- [ ] **Step 1: 创建 SmsReader.kt**
+
+```kotlin
+package com.quickpick.util
+
+import android.content.Context
+import android.net.Uri
+import android.provider.Telephony
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+data class SmsMessage(
+    val id: String,
+    val body: String,
+    val timestamp: Long
+)
+
+object SmsReader {
+
+    private val SMS_URI: Uri = Telephony.Sms.Inbox.CONTENT_URI
+    private val PROJECTION = arrayOf(
+        Telephony.Sms._ID,
+        Telephony.Sms.BODY,
+        Telephony.Sms.DATE
+    )
+
+    /**
+     * 读取所有收件箱短信（IO 线程执行）。
+     *
+     * 注意：不要在这里捕获 SecurityException！
+     * 无权限时让它抛出，由调用方区分「无权限」和「收件箱真空」——
+     * 吞掉异常返回空表会把空收件箱误判成无权限。
+     */
+    suspend fun readAll(context: Context): List<SmsMessage> = withContext(Dispatchers.IO) {
+        val messages = mutableListOf<SmsMessage>()
+        context.contentResolver.query(
+            SMS_URI,
+            PROJECTION,
+            null, null,
+            "${Telephony.Sms.DATE} DESC"
+        )?.use { cursor ->
+            val idCol = cursor.getColumnIndexOrThrow(Telephony.Sms._ID)
+            val bodyCol = cursor.getColumnIndexOrThrow(Telephony.Sms.BODY)
+            val dateCol = cursor.getColumnIndexOrThrow(Telephony.Sms.DATE)
+            while (cursor.moveToNext()) {
+                messages.add(
+                    SmsMessage(
+                        id = cursor.getString(idCol),
+                        body = cursor.getString(bodyCol),
+                        timestamp = cursor.getLong(dateCol)
+                    )
+                )
+            }
+        }
+        messages
+    }
+}
+```
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add app/src/main/java/com/quickpick/util/SmsReader.kt && git commit -m "feat: add SmsReader — ContentResolver-based SMS reading"
+```
+
+---
+
+### Task 3.4: 创建 JSON 导入导出工具
+
+**Files:**
+- Create: `app/src/main/java/com/quickpick/util/JsonExporter.kt`
+
+- [ ] **Step 1: 创建 JsonExporter.kt**
+
+```kotlin
+package com.quickpick.util
+
+import com.google.gson.*
+import com.quickpick.domain.model.MatchRule
+
+object JsonExporter {
+
+    private val gson = GsonBuilder().setPrettyPrinting().create()
+
+    /** 全量导出：所有规则 → JSON 数组字符串 */
+    fun exportAll(rules: List<MatchRule>): String {
+        val array = JsonArray()
+        rules.forEach { array.add(ruleToJson(it)) }
+        return gson.toJson(array)
+    }
+
+    /** 单条导出 */
+    fun exportSingle(rule: MatchRule): String {
+        return gson.toJson(ruleToJson(rule))
+    }
+
+    /** 导入：JSON 字符串 → MatchRule 列表 */
+    fun import(json: String): Result<List<MatchRule>> {
+        return try {
+            val element = JsonParser.parseString(json)
+            val rules = when {
+                element.isJsonArray -> {
+                    element.asJsonArray.map { parseRule(it.asJsonObject) }
+                }
+                element.isJsonObject -> {
+                    listOf(parseRule(element.asJsonObject))
+                }
+                else -> throw JsonParseException("不是有效的规则 JSON")
+            }
+            // 校验每条规则
+            rules.forEach { validateRule(it) }
+            Result.success(rules)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    private fun ruleToJson(rule: MatchRule): JsonObject {
+        return JsonObject().apply {
+            addProperty("name", rule.name)
+            add("fields", JsonObject().apply {
+                add("trackingNumber", fieldToJson(rule.trackingPrefix, rule.trackingSuffix))
+                add("pickupCode", fieldToJson(rule.codePrefix, rule.codeSuffix))
+                add("address", fieldToJson(rule.addressPrefix, rule.addressSuffix))
+                add("phone", fieldToJson(rule.phonePrefix, rule.phoneSuffix))
+            })
+        }
+    }
+
+    private fun fieldToJson(prefix: String?, suffix: String?): JsonObject {
+        return JsonObject().apply {
+            addProperty("prefix", prefix ?: "")
+            addProperty("suffix", suffix ?: "")
+        }
+    }
+
+    private fun parseRule(obj: JsonObject): MatchRule {
+        val name = obj.get("name")?.asString ?: throw JsonParseException("缺少 name")
+        val fields = obj.getAsJsonObject("fields") ?: throw JsonParseException("缺少 fields")
+
+        fun getField(key: String): Pair<String?, String?> {
+            val f = fields.getAsJsonObject(key) ?: return null to null
+            val p = f.get("prefix")?.asString?.takeIf { it.isNotEmpty() }
+            val s = f.get("suffix")?.asString?.takeIf { it.isNotEmpty() }
+            return p to s
+        }
+
+        val (tp, ts) = getField("trackingNumber")
+        val (cp, cs) = getField("pickupCode")
+        val (ap, as_) = getField("address")
+        val (pp, ps) = getField("phone")
+
+        return MatchRule(
+            name = name,
+            trackingPrefix = tp, trackingSuffix = ts,
+            codePrefix = cp, codeSuffix = cs,
+            addressPrefix = ap, addressSuffix = as_,
+            phonePrefix = pp, phoneSuffix = ps
+        )
+    }
+
+    private fun validateRule(rule: MatchRule) {
+        if (rule.name.isBlank()) throw JsonParseException("规则名称不能为空")
+        if (!rule.hasAnyField) throw JsonParseException("至少需要配置一个字段")
+    }
+
+    /**
+     * 清理 AI 返回的 JSON 文本：剥离 markdown 代码围栏（```json）和首尾杂文本。
+     * 真实 LLM 经常带围栏输出，不剥离会直接解析失败。
+     */
+    fun sanitizeAiJson(raw: String): String {
+        var text = raw.trim()
+        text = text.removePrefix("```json").removePrefix("```JSON").removePrefix("```")
+        text = text.removeSuffix("```").trim()
+        // 截取第一个 { 或 [ 到最后一个 } 或 ]，容忍 AI 在 JSON 前后加解释性文字
+        val start = text.indexOfFirst { it == '{' || it == '[' }
+        val end = text.indexOfLast { it == '}' || it == ']' }
+        return if (start >= 0 && end > start) text.substring(start, end + 1) else text
+    }
+}
+```
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add app/src/main/java/com/quickpick/util/JsonExporter.kt && git commit -m "feat: add JsonExporter — import/export rules as JSON"
+```
+
+---
+

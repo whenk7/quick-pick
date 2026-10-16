@@ -1,0 +1,814 @@
+# Phase 5b：规则编辑器（TokenChip / FieldCard / ViewModel / 吸顶编辑器页）
+
+> 所属轮次：第 4 轮 ｜ 前置：Phase 2-4
+> 本文档为可执行清单：按 Task 顺序照做即可，每个 Step 含完整代码。
+
+---
+
+### Task 5.3: 规则编辑器组件 — TokenChip + FieldCard
+
+**Files:**
+- Create: `app/src/main/java/com/quickpick/ui/component/TokenChip.kt`
+- Create: `app/src/main/java/com/quickpick/ui/component/FieldCard.kt`
+
+- [ ] **Step 1: 创建 TokenChip.kt**
+
+```kotlin
+package com.quickpick.ui.component
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import com.quickpick.ui.theme.*
+
+enum class TokenState { NORMAL, MATCHED, SELECTED }
+
+/** 分词块三态：普通无色 / 已被提取字段命中=绿框 / 选中=主色填充白字 */
+@Composable
+fun TokenChip(
+    text: String,
+    state: TokenState,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val bg = when (state) {
+        TokenState.NORMAL -> InputBackground
+        TokenState.MATCHED -> Color(0xFFF2F8F2)
+        TokenState.SELECTED -> Primary
+    }
+    val border = when (state) {
+        TokenState.NORMAL -> Color.Transparent
+        TokenState.MATCHED -> Primary     // 绿色边框表示已被规则匹配
+        TokenState.SELECTED -> Primary
+    }
+    val fg = when (state) {
+        TokenState.SELECTED -> Color.White
+        else -> TextPrimary
+    }
+
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = fg,
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(bg)
+            .border(1.5.dp, border, RoundedCornerShape(8.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 10.dp, vertical = 5.dp)
+    )
+}
+```
+
+- [ ] **Step 2: 创建 FieldCard.kt**
+
+```kotlin
+package com.quickpick.ui.component
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
+import com.quickpick.ui.theme.*
+
+enum class FieldCardState { CONFIGURED, ACTIVE, EMPTY }
+
+@Composable
+fun FieldCard(
+    fieldName: String,
+    dotColor: androidx.compose.ui.graphics.Color,
+    state: FieldCardState,
+    prefix: String,
+    suffix: String,
+    onPrefixChange: (String) -> Unit,
+    onSuffixChange: (String) -> Unit,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val elevation = when (state) {
+        FieldCardState.ACTIVE -> 6.dp
+        else -> 2.dp
+    }
+    val offsetX = if (state == FieldCardState.ACTIVE) 2.dp else 0.dp
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = offsetX)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (state == FieldCardState.EMPTY) Surface.copy(alpha = 0.7f) else Surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = elevation)
+    ) {
+        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+            // 左侧强调色线：选中态/已配置态显示，空字段不显示
+            if (state != FieldCardState.EMPTY) {
+                Box(
+                    modifier = Modifier
+                        .padding(start = 10.dp, top = 14.dp, bottom = 14.dp)
+                        .fillMaxHeight()
+                        .width(3.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(Primary)
+                )
+            }
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(dotColor)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = fieldName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (state == FieldCardState.ACTIVE) Primary else TextPrimary,
+                    fontWeight = if (state == FieldCardState.ACTIVE)
+                        androidx.compose.ui.text.font.FontWeight.SemiBold
+                    else androidx.compose.ui.text.font.FontWeight.Normal
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = when (state) {
+                        FieldCardState.CONFIGURED -> "已配置"
+                        FieldCardState.ACTIVE -> "编辑中"
+                        FieldCardState.EMPTY -> "可选"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = when (state) {
+                        FieldCardState.CONFIGURED -> Done
+                        FieldCardState.ACTIVE -> Primary
+                        FieldCardState.EMPTY -> TextTertiary
+                    }
+                )
+            }
+
+            if (state != FieldCardState.EMPTY || prefix.isNotEmpty() || suffix.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = prefix,
+                        onValueChange = onPrefixChange,
+                        placeholder = { Text("前缀", style = MaterialTheme.typography.bodySmall) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyMedium,
+                        shape = MaterialTheme.shapes.large   // 输入框 16dp 圆角（设计系统）
+                    )
+                    Text("→", color = TextTertiary, style = MaterialTheme.typography.bodyMedium)
+                    OutlinedTextField(
+                        value = suffix,
+                        onValueChange = onSuffixChange,
+                        placeholder = { Text("后缀", style = MaterialTheme.typography.bodySmall) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyMedium,
+                        shape = MaterialTheme.shapes.large
+                    )
+                }
+            }
+        }
+        }
+    }
+}
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add app/src/main/java/com/quickpick/ui/component/ && git commit -m "feat: add TokenChip and FieldCard editor components"
+```
+
+---
+
+### Task 5.4: RuleEditorViewModel + RuleEditorScreen
+
+**Files:**
+- Create: `app/src/main/java/com/quickpick/ui/viewmodel/RuleEditorViewModel.kt`
+- Create: `app/src/main/java/com/quickpick/ui/screen/RuleEditorScreen.kt`
+
+- [ ] **Step 1: 创建 RuleEditorViewModel.kt**
+
+```kotlin
+package com.quickpick.ui.viewmodel
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.quickpick.QuickPickApp
+import com.quickpick.data.repository.RuleRepository
+import com.quickpick.data.repository.SmsRepository
+import com.quickpick.domain.engine.MatchEngine
+import com.quickpick.domain.model.ExtractedFields
+import com.quickpick.domain.model.MatchRule
+import com.quickpick.util.JsonExporter
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+
+data class EditorState(
+    val ruleId: Long = 0,
+    val ruleName: String = "",
+    val smsText: String = "",
+    val activeField: ActiveField = ActiveField.PICKUP_CODE,
+    val trackingPrefix: String = "",
+    val trackingSuffix: String = "",
+    val codePrefix: String = "",
+    val codeSuffix: String = "",
+    val addressPrefix: String = "",
+    val addressSuffix: String = "",
+    val phonePrefix: String = "",
+    val phoneSuffix: String = "",
+    val preview: ExtractedFields? = null
+)
+
+enum class ActiveField {
+    TRACKING, PICKUP_CODE, ADDRESS, PHONE
+}
+
+class RuleEditorViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val db = (application as QuickPickApp).database
+    private val repo = RuleRepository(db.matchRuleDao())
+    private val smsRepo = SmsRepository(db.scannedSmsDao())
+
+    private val _state = MutableStateFlow(EditorState())
+    val state: StateFlow<EditorState> = _state
+
+    /** 一次性提示（Toast） */
+    private val _events = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val events: SharedFlow<String> = _events
+
+    /** 保存完成事件：true=编辑已有规则（UI 提示是否重扫未匹配短信），false=新增 */
+    private val _savedEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
+    val savedEvents: SharedFlow<Boolean> = _savedEvents
+
+    fun loadRule(id: Long) {
+        viewModelScope.launch {
+            val rule = repo.getById(id) ?: return@launch
+            _state.value = _state.value.copy(
+                ruleId = rule.id,
+                ruleName = rule.name,
+                smsText = rule.sampleSms ?: "",
+                trackingPrefix = rule.trackingPrefix ?: "",
+                trackingSuffix = rule.trackingSuffix ?: "",
+                codePrefix = rule.codePrefix ?: "",
+                codeSuffix = rule.codeSuffix ?: "",
+                addressPrefix = rule.addressPrefix ?: "",
+                addressSuffix = rule.addressSuffix ?: "",
+                phonePrefix = rule.phonePrefix ?: "",
+                phoneSuffix = rule.phoneSuffix ?: ""
+            )
+            refreshPreview()
+        }
+    }
+
+    /** 从 AI 导入的 JSON 字符串加载（字符串传递，避开 Parcelable 和进程重建问题） */
+    fun loadFromJson(json: String, smsText: String) {
+        val rule = JsonExporter.import(JsonExporter.sanitizeAiJson(json))
+            .getOrNull()?.firstOrNull() ?: return
+        _state.value = _state.value.copy(
+            ruleName = rule.name,
+            smsText = smsText,
+            trackingPrefix = rule.trackingPrefix ?: "",
+            trackingSuffix = rule.trackingSuffix ?: "",
+            codePrefix = rule.codePrefix ?: "",
+            codeSuffix = rule.codeSuffix ?: "",
+            addressPrefix = rule.addressPrefix ?: "",
+            addressSuffix = rule.addressSuffix ?: "",
+            phonePrefix = rule.phonePrefix ?: "",
+            phoneSuffix = rule.phoneSuffix ?: ""
+        )
+        refreshPreview()
+    }
+
+    fun updateRuleName(name: String) {
+        _state.value = _state.value.copy(ruleName = name)
+    }
+
+    fun updateSmsText(text: String) {
+        // 规则名为空且短信带【公司签名】时，提取为默认规则名（spec 五.7；纯 indexOf 与引擎同风格）
+        val defaultName = if (_state.value.ruleName.isBlank()) {
+            val l = text.indexOf('【')
+            val r = text.indexOf('】', l + 1)
+            if (l >= 0 && r > l + 1) text.substring(l + 1, r) else null
+        } else null
+        _state.value = _state.value.copy(
+            smsText = text,
+            ruleName = defaultName ?: _state.value.ruleName
+        )
+        refreshPreview()
+    }
+
+    fun setActiveField(field: ActiveField) {
+        _state.value = _state.value.copy(activeField = field)
+    }
+
+    fun updateActiveFieldPrefix(value: String) {
+        val s = _state.value
+        val ns = when (s.activeField) {
+            ActiveField.TRACKING -> s.copy(trackingPrefix = value)
+            ActiveField.PICKUP_CODE -> s.copy(codePrefix = value)
+            ActiveField.ADDRESS -> s.copy(addressPrefix = value)
+            ActiveField.PHONE -> s.copy(phonePrefix = value)
+        }
+        _state.value = ns
+        refreshPreview()
+    }
+
+    fun updateActiveFieldSuffix(value: String) {
+        val s = _state.value
+        val ns = when (s.activeField) {
+            ActiveField.TRACKING -> s.copy(trackingSuffix = value)
+            ActiveField.PICKUP_CODE -> s.copy(codeSuffix = value)
+            ActiveField.ADDRESS -> s.copy(addressSuffix = value)
+            ActiveField.PHONE -> s.copy(phoneSuffix = value)
+        }
+        _state.value = ns
+        refreshPreview()
+    }
+
+    fun setTokenAsAnchor(token: String) {
+        val s = _state.value
+        val text = s.smsText
+        val idx = text.indexOf(token)
+        if (idx == -1) return
+
+        // 前缀 = token 之前的最短唯一文本（**不含 token 本身**，否则提取结果必为空串——初版缺陷）
+        val shortPrefix = findShortUniquePrefix(text, idx)
+        // 后缀 = token 之后紧跟的标点/空白；没有则取后一个字符
+        val afterText = text.substring(idx + token.length)
+        val suffix = afterText.takeWhile { it in "，。；、！？,.!?）)】 ：: \n\t" }
+            .ifEmpty { afterText.take(1) }
+
+        val ns = when (s.activeField) {
+            ActiveField.TRACKING -> s.copy(trackingPrefix = shortPrefix, trackingSuffix = suffix)
+            ActiveField.PICKUP_CODE -> s.copy(codePrefix = shortPrefix, codeSuffix = suffix)
+            ActiveField.ADDRESS -> s.copy(addressPrefix = shortPrefix, addressSuffix = suffix)
+            ActiveField.PHONE -> s.copy(phonePrefix = shortPrefix, phoneSuffix = suffix)
+        }
+        _state.value = ns
+        refreshPreview()
+    }
+
+    /** 找 text[0..targetIdx) 的从右往左最短唯一片段作为前缀锚点（首次出现即目标位置即可） */
+    private fun findShortUniquePrefix(text: String, targetIdx: Int): String {
+        var start = targetIdx - 1
+        while (start > 0) {
+            val candidate = text.substring(start, targetIdx)
+            if (text.indexOf(candidate) == start) return candidate
+            start--
+        }
+        return text.substring(0, targetIdx)
+    }
+
+    fun saveRule() {
+        val s = _state.value
+        when {
+            // 温和文案：不用「错误」「失败」
+            s.ruleName.isBlank() -> {
+                _events.tryEmit("先给规则起个名字吧～")
+                return
+            }
+            listOf(
+                s.trackingPrefix, s.trackingSuffix, s.codePrefix, s.codeSuffix,
+                s.addressPrefix, s.addressSuffix, s.phonePrefix, s.phoneSuffix
+            ).all { it.isBlank() } -> {
+                _events.tryEmit("至少配置一个字段，不然规则匹配不到内容哦")
+                return
+            }
+        }
+
+        viewModelScope.launch {
+            val rule = MatchRule(
+                id = s.ruleId,
+                name = s.ruleName,
+                trackingPrefix = s.trackingPrefix.ifEmpty { null },
+                trackingSuffix = s.trackingSuffix.ifEmpty { null },
+                codePrefix = s.codePrefix.ifEmpty { null },
+                codeSuffix = s.codeSuffix.ifEmpty { null },
+                addressPrefix = s.addressPrefix.ifEmpty { null },
+                addressSuffix = s.addressSuffix.ifEmpty { null },
+                phonePrefix = s.phonePrefix.ifEmpty { null },
+                phoneSuffix = s.phoneSuffix.ifEmpty { null },
+                sampleSms = s.smsText.ifEmpty { null }
+            )
+            val wasEdit = s.ruleId != 0L
+            if (wasEdit) {
+                repo.update(rule)
+            } else {
+                repo.insert(rule)
+            }
+            _savedEvents.emit(wasEdit)
+        }
+    }
+
+    /** 规则更新后：清除「未匹配短信」的已扫标记，回到列表页时自动重扫它们 */
+    fun rescanUnmatched() {
+        viewModelScope.launch { smsRepo.deleteUnmatched() }
+    }
+
+    private fun refreshPreview() {
+        val s = _state.value
+        if (s.smsText.isBlank()) {
+            _state.value = s.copy(preview = null)
+            return
+        }
+        val rule = MatchRule(
+            name = s.ruleName.ifEmpty { "预览" },
+            trackingPrefix = s.trackingPrefix.ifEmpty { null },
+            trackingSuffix = s.trackingSuffix.ifEmpty { null },
+            codePrefix = s.codePrefix.ifEmpty { null },
+            codeSuffix = s.codeSuffix.ifEmpty { null },
+            addressPrefix = s.addressPrefix.ifEmpty { null },
+            addressSuffix = s.addressSuffix.ifEmpty { null },
+            phonePrefix = s.phonePrefix.ifEmpty { null },
+            phoneSuffix = s.phoneSuffix.ifEmpty { null }
+        )
+        _state.value = s.copy(preview = MatchEngine.extract(s.smsText, rule))
+    }
+}
+```
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add app/src/main/java/com/quickpick/ui/viewmodel/RuleEditorViewModel.kt && git commit -m "feat: add RuleEditorViewModel with anchor editing and preview"
+```
+
+---
+
+### Task 5.5: RuleEditorScreen
+
+**Files:**
+- Create: `app/src/main/java/com/quickpick/ui/screen/RuleEditorScreen.kt`
+
+- [ ] **Step 1: 创建 RuleEditorScreen.kt**
+
+```kotlin
+package com.quickpick.ui.screen
+
+import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.quickpick.domain.model.PackageRecord
+import com.quickpick.ui.component.*
+import com.quickpick.ui.theme.*
+import com.quickpick.ui.viewmodel.ActiveField
+import com.quickpick.ui.viewmodel.EditorState
+import com.quickpick.ui.viewmodel.RuleEditorViewModel
+
+@Composable
+fun RuleEditorScreen(
+    viewModel: RuleEditorViewModel,
+    onBack: () -> Unit
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    var selectedToken by remember { mutableStateOf<String?>(null) }
+    var rescanDialogVisible by remember { mutableStateOf(false) }
+
+    // 一次性提示 → Toast
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
+    }
+    // 保存完成：编辑已有规则时提示是否重扫未匹配短信（edge-cases 三）；新增直接返回
+    LaunchedEffect(Unit) {
+        viewModel.savedEvents.collect { wasEdit ->
+            if (wasEdit) rescanDialogVisible = true else onBack()
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            // 自定义顶栏要自己处理状态栏 inset（targetSdk 36 强制 edge-to-edge）
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBack) {
+                    Text("←", style = MaterialTheme.typography.titleLarge)
+                }
+                Text(
+                    text = if (state.ruleId == 0L) "新增匹配规则" else "编辑匹配规则",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = TextPrimary,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        },
+        bottomBar = {
+            // 底部固定保存大按钮（落地方案：大圆角、主色填充、白字）
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Background)
+                    .navigationBarsPadding()
+                    .imePadding()
+                    .padding(16.dp)
+            ) {
+                Button(
+                    onClick = { viewModel.saveRule() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text("保存规则", color = Color.White)
+                }
+            }
+        }
+    ) { padding ->
+        Column(modifier = Modifier.padding(padding)) {
+            // 分词区：固定在顶部不滚动（真·吸顶，两区布局实现，不依赖 stickyHeader）
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                shape = MaterialTheme.shapes.large,
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "点击词块填入前后缀 · 当前选中：${activeFieldLabel(state.activeField)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextTertiary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        // 已粘贴短信后提供「重新粘贴」出口，否则文本永久锁死
+                        if (state.smsText.isNotEmpty()) {
+                            TextButton(onClick = {
+                                selectedToken = null
+                                viewModel.updateSmsText("")
+                            }) {
+                                Text("重新粘贴", style = MaterialTheme.typography.bodySmall, color = Primary)
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    if (state.smsText.isEmpty()) {
+                        OutlinedTextField(
+                            value = state.smsText,
+                            onValueChange = { viewModel.updateSmsText(it) },
+                            placeholder = { Text("从短信 App 复制一条快递短信，粘贴到这里...") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 3,
+                            shape = MaterialTheme.shapes.large
+                        )
+                    } else {
+                        TokenGrid(
+                            smsText = state.smsText,
+                            preview = state.preview,
+                            selectedToken = selectedToken,
+                            onTokenClick = { token ->
+                                selectedToken = token
+                                viewModel.setTokenAsAnchor(token)
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 下方滚动区：规则名 + 字段卡片 + 实时预览
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item {
+                    OutlinedTextField(
+                        value = state.ruleName,
+                        onValueChange = { viewModel.updateRuleName(it) },
+                        label = { Text("快递公司名") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.large
+                    )
+                }
+
+                item {
+                    Text(
+                        text = "提取字段",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextTertiary
+                    )
+                }
+
+                item {
+                    FieldCard(
+                        fieldName = "📦 快递单号",
+                        dotColor = BrandColors.SF,
+                        state = fieldState(state, ActiveField.TRACKING),
+                        prefix = state.trackingPrefix,
+                        suffix = state.trackingSuffix,
+                        onPrefixChange = { viewModel.updateActiveFieldPrefix(it) },
+                        onSuffixChange = { viewModel.updateActiveFieldSuffix(it) },
+                        onClick = { viewModel.setActiveField(ActiveField.TRACKING) }
+                    )
+                }
+                item {
+                    FieldCard(
+                        fieldName = "🔑 取件码",
+                        dotColor = Primary,
+                        state = fieldState(state, ActiveField.PICKUP_CODE),
+                        prefix = state.codePrefix,
+                        suffix = state.codeSuffix,
+                        onPrefixChange = { viewModel.updateActiveFieldPrefix(it) },
+                        onSuffixChange = { viewModel.updateActiveFieldSuffix(it) },
+                        onClick = { viewModel.setActiveField(ActiveField.PICKUP_CODE) }
+                    )
+                }
+                item {
+                    FieldCard(
+                        fieldName = "📍 取件地址",
+                        dotColor = BrandColors.ZTO,
+                        state = fieldState(state, ActiveField.ADDRESS),
+                        prefix = state.addressPrefix,
+                        suffix = state.addressSuffix,
+                        onPrefixChange = { viewModel.updateActiveFieldPrefix(it) },
+                        onSuffixChange = { viewModel.updateActiveFieldSuffix(it) },
+                        onClick = { viewModel.setActiveField(ActiveField.ADDRESS) }
+                    )
+                }
+                item {
+                    FieldCard(
+                        fieldName = "📱 快递员电话（可选）",
+                        dotColor = BrandColors.EMS,
+                        state = fieldState(state, ActiveField.PHONE),
+                        prefix = state.phonePrefix,
+                        suffix = state.phoneSuffix,
+                        onPrefixChange = { viewModel.updateActiveFieldPrefix(it) },
+                        onSuffixChange = { viewModel.updateActiveFieldSuffix(it) },
+                        onClick = { viewModel.setActiveField(ActiveField.PHONE) }
+                    )
+                }
+
+                // 实时预览：直接复用列表页的 PackageCard，样式完全一致
+                val preview = state.preview
+                if (preview != null) {
+                    item {
+                        Text(
+                            text = "实时预览",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextTertiary
+                        )
+                    }
+                    item {
+                        PackageCard(
+                            record = PackageRecord(
+                                companyName = state.ruleName.ifEmpty { "预览" },
+                                trackingNumber = preview.trackingNumber,
+                                pickupCode = preview.pickupCode,
+                                address = preview.address,
+                                phone = preview.phone,
+                                smsBody = state.smsText,
+                                smsTimestamp = System.currentTimeMillis(),
+                                isIncomplete = false
+                            ),
+                            onTogglePickedUp = {},
+                            onCopyField = {}
+                        )
+                    }
+                }
+
+                item { Spacer(modifier = Modifier.height(8.dp)) }
+            }
+        }
+    }
+
+    if (rescanDialogVisible) {
+        ConfirmDialog(
+            title = "规则已保存",
+            message = "要用新规则重新扫描之前没匹配到的短信吗？",
+            confirmText = "重新扫描",
+            onConfirm = {
+                viewModel.rescanUnmatched()
+                rescanDialogVisible = false
+                onBack()
+            },
+            onDismiss = {
+                rescanDialogVisible = false
+                onBack()
+            }
+        )
+    }
+}
+
+@Composable
+private fun TokenGrid(
+    smsText: String,
+    preview: com.quickpick.domain.model.ExtractedFields?,
+    selectedToken: String?,
+    onTokenClick: (String) -> Unit
+) {
+    // 简单分词：按标点和空格拆分，保留标点作为独立 token
+    val tokens = remember(smsText) {
+        val result = mutableListOf<String>()
+        var current = ""
+        for (ch in smsText) {
+            if (ch in "【】《》（）()，。；、：！？,.!? \n\t") {
+                if (current.isNotEmpty()) { result.add(current); current = "" }
+                if (!ch.isWhitespace()) result.add(ch.toString())
+            } else {
+                current += ch
+            }
+        }
+        if (current.isNotEmpty()) result.add(current)
+        result
+    }
+
+    val matchedValues = remember(preview) {
+        listOfNotNull(preview?.trackingNumber, preview?.pickupCode, preview?.address, preview?.phone)
+    }
+
+    // FlowRow 在 Compose foundation 1.7+ 已是稳定 API（BOM 2026.09 无需 @OptIn）
+    androidx.compose.foundation.layout.FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        tokens.forEach { token ->
+            // 命中判定：token 被任一已提取字段值包含（多 token 的长字段也能高亮）
+            val isMatched = matchedValues.any { value -> value.contains(token) }
+            TokenChip(
+                text = token,
+                state = when {
+                    token == selectedToken -> TokenState.SELECTED
+                    isMatched -> TokenState.MATCHED
+                    else -> TokenState.NORMAL
+                },
+                onClick = { onTokenClick(token) }
+            )
+        }
+    }
+}
+
+private fun fieldState(state: EditorState, field: ActiveField): FieldCardState = when {
+    state.activeField == field -> FieldCardState.ACTIVE
+    isFieldConfigured(state, field) -> FieldCardState.CONFIGURED
+    else -> FieldCardState.EMPTY
+}
+
+private fun isFieldConfigured(state: EditorState, field: ActiveField): Boolean = when (field) {
+    ActiveField.TRACKING -> state.trackingPrefix.isNotEmpty() || state.trackingSuffix.isNotEmpty()
+    ActiveField.PICKUP_CODE -> state.codePrefix.isNotEmpty() || state.codeSuffix.isNotEmpty()
+    ActiveField.ADDRESS -> state.addressPrefix.isNotEmpty() || state.addressSuffix.isNotEmpty()
+    ActiveField.PHONE -> state.phonePrefix.isNotEmpty() || state.phoneSuffix.isNotEmpty()
+}
+
+private fun activeFieldLabel(field: ActiveField): String = when (field) {
+    ActiveField.TRACKING -> "单号"
+    ActiveField.PICKUP_CODE -> "取件码"
+    ActiveField.ADDRESS -> "地址"
+    ActiveField.PHONE -> "电话"
+}
+```
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add app/src/main/java/com/quickpick/ui/screen/RuleEditorScreen.kt && git commit -m "feat: add RuleEditorScreen with token grid, field cards, and card preview"
+```
+
+---
+
