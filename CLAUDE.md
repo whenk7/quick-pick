@@ -81,6 +81,7 @@ Compose BOM 实际 2026.06.01（计划写 2026.09，因其硬要求 compileSdk 3
 - **节奏**：v1.0.0 发布前直接提交 main（无用户，无仪式）；发布后新东西走分支，攒够一波打新 tag
 - **不要** develop/release 分支——那是多人团队的 GitFlow，单人项目只剩负担
 - commit 信息沿用 `feat:/fix:/docs:/chore:` 前缀
+- **CI 发版**：推 `v*` tag 触发 `.github/workflows/release.yml` → 签名 APK 自动挂 Release。keystore 在 `~/quickpick-release.jks`（**单密码**，PKCS12 不支持库/key 双密码，keypass 会被静默忽略），4 个 GitHub secrets 已配。2026-10-16 首跑踩坑记录：setup-android action 卡协议（用 runner 预装 SDK）、sdkmanager 不在 PATH（走 `$ANDROID_HOME/cmdline-tools` 全路径）、GITHUB_TOKEN 默认只读（workflow 需 `permissions: contents: write`）
 
 ## 交流风格
 
