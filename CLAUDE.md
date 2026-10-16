@@ -41,7 +41,7 @@ min API 30，架构 MVVM
 │   ├── design/
 │   │   ├── design-system.md           ← 治愈系极简设计系统
 │   │   ├── theme.css                  ← 完整 CSS 令牌
-│   │   └── quickpick.html             ← 页面 mockup 参考
+│   │   ├── quickpick.html + mockup-*.html  ← 页面 mockup 参考
 │   └── plans/quickpick/               ← 最终执行计划：00-master.md 总纲 + 9 个 Phase 分册
 └── app/                               ← 还没创建，计划执行时建
 ```
