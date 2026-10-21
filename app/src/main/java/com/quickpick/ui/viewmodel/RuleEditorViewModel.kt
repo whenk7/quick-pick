@@ -29,11 +29,14 @@ data class EditorState(
     val addressSuffix: String = "",
     val phonePrefix: String = "",
     val phoneSuffix: String = "",
+    val senderPattern: String = "",
+    val brandPrefix: String = "",
+    val brandSuffix: String = "",
     val preview: ExtractedFields? = null
 )
 
 enum class ActiveField {
-    TRACKING, PICKUP_CODE, ADDRESS, PHONE
+    TRACKING, PICKUP_CODE, ADDRESS, PHONE, SENDER, BRAND
 }
 
 class RuleEditorViewModel(application: Application) : AndroidViewModel(application) {
@@ -67,7 +70,10 @@ class RuleEditorViewModel(application: Application) : AndroidViewModel(applicati
                 addressPrefix = rule.addressPrefix ?: "",
                 addressSuffix = rule.addressSuffix ?: "",
                 phonePrefix = rule.phonePrefix ?: "",
-                phoneSuffix = rule.phoneSuffix ?: ""
+                phoneSuffix = rule.phoneSuffix ?: "",
+                senderPattern = rule.senderPattern ?: "",
+                brandPrefix = rule.brandPrefix ?: "",
+                brandSuffix = rule.brandSuffix ?: ""
             )
             refreshPreview()
         }
@@ -87,7 +93,10 @@ class RuleEditorViewModel(application: Application) : AndroidViewModel(applicati
             addressPrefix = rule.addressPrefix ?: "",
             addressSuffix = rule.addressSuffix ?: "",
             phonePrefix = rule.phonePrefix ?: "",
-            phoneSuffix = rule.phoneSuffix ?: ""
+            phoneSuffix = rule.phoneSuffix ?: "",
+            senderPattern = rule.senderPattern ?: "",
+            brandPrefix = rule.brandPrefix ?: "",
+            brandSuffix = rule.brandSuffix ?: ""
         )
         refreshPreview()
     }
@@ -121,6 +130,8 @@ class RuleEditorViewModel(application: Application) : AndroidViewModel(applicati
             ActiveField.PICKUP_CODE -> s.copy(codePrefix = value)
             ActiveField.ADDRESS -> s.copy(addressPrefix = value)
             ActiveField.PHONE -> s.copy(phonePrefix = value)
+            ActiveField.SENDER -> s.copy(senderPattern = value)
+            ActiveField.BRAND -> s.copy(brandPrefix = value)
         }
         _state.value = ns
         refreshPreview()
@@ -133,6 +144,9 @@ class RuleEditorViewModel(application: Application) : AndroidViewModel(applicati
             ActiveField.PICKUP_CODE -> s.copy(codeSuffix = value)
             ActiveField.ADDRESS -> s.copy(addressSuffix = value)
             ActiveField.PHONE -> s.copy(phoneSuffix = value)
+            // senderPattern 是单字符串匹配，无后缀概念（UI 也不显示后缀框），保持不变
+            ActiveField.SENDER -> s
+            ActiveField.BRAND -> s.copy(brandSuffix = value)
         }
         _state.value = ns
         refreshPreview()
@@ -156,6 +170,9 @@ class RuleEditorViewModel(application: Application) : AndroidViewModel(applicati
             ActiveField.PICKUP_CODE -> s.copy(codePrefix = shortPrefix, codeSuffix = suffix)
             ActiveField.ADDRESS -> s.copy(addressPrefix = shortPrefix, addressSuffix = suffix)
             ActiveField.PHONE -> s.copy(phonePrefix = shortPrefix, phoneSuffix = suffix)
+            // senderPattern 匹配发件方号码而非短信正文，不做前后缀锚点计算，直接取词块本身
+            ActiveField.SENDER -> s.copy(senderPattern = token)
+            ActiveField.BRAND -> s.copy(brandPrefix = shortPrefix, brandSuffix = suffix)
         }
         _state.value = ns
         refreshPreview()
@@ -201,6 +218,9 @@ class RuleEditorViewModel(application: Application) : AndroidViewModel(applicati
                 addressSuffix = s.addressSuffix.ifEmpty { null },
                 phonePrefix = s.phonePrefix.ifEmpty { null },
                 phoneSuffix = s.phoneSuffix.ifEmpty { null },
+                senderPattern = s.senderPattern.ifEmpty { null },
+                brandPrefix = s.brandPrefix.ifEmpty { null },
+                brandSuffix = s.brandSuffix.ifEmpty { null },
                 sampleSms = s.smsText.ifEmpty { null }
             )
             val wasEdit = s.ruleId != 0L
@@ -233,8 +253,12 @@ class RuleEditorViewModel(application: Application) : AndroidViewModel(applicati
             addressPrefix = s.addressPrefix.ifEmpty { null },
             addressSuffix = s.addressSuffix.ifEmpty { null },
             phonePrefix = s.phonePrefix.ifEmpty { null },
-            phoneSuffix = s.phoneSuffix.ifEmpty { null }
+            phoneSuffix = s.phoneSuffix.ifEmpty { null },
+            senderPattern = s.senderPattern.ifEmpty { null },
+            brandPrefix = s.brandPrefix.ifEmpty { null },
+            brandSuffix = s.brandSuffix.ifEmpty { null }
         )
+        // 预览不传 smsAddress（编辑器里没有发件方号码），senderPattern 不参与过滤，预览始终可见
         _state.value = s.copy(preview = MatchEngine.extract(s.smsText, rule))
     }
 }

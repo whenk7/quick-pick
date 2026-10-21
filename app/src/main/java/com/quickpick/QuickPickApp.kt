@@ -23,7 +23,9 @@ class QuickPickApp : Application() {
         appScope.launch {
             runCatching {
                 PresetRules.seedIfNeeded(settingsStore, database.matchRuleDao())
-            }.onFailure { Log.w("QuickPickApp", "预置规则没能灌入", it) }
+                // v1.0.0 老用户：旧预置规则补 senderPattern/品牌锚点（一次性，seeded 标记后不再跑）
+                PresetRules.upgradeIfNeeded(settingsStore, database.matchRuleDao())
+            }.onFailure { Log.w("QuickPickApp", "预置规则没能灌入/升级", it) }
         }
     }
 }

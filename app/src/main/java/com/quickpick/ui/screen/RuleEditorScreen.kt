@@ -2,6 +2,7 @@ package com.quickpick.ui.screen
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,8 +10,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quickpick.domain.model.PackageRecord
@@ -211,6 +214,30 @@ fun RuleEditorScreen(
                         onClick = { viewModel.setActiveField(ActiveField.PHONE) }
                     )
                 }
+                item {
+                    // senderPattern 是单字符串匹配（对发件方号码做包含过滤），非前后缀锚点对 → 简化版单输入卡片
+                    SingleFieldCard(
+                        fieldName = "📮 发件方过滤",
+                        dotColor = BrandColors.YTO,
+                        state = fieldState(state, ActiveField.SENDER),
+                        value = state.senderPattern,
+                        placeholder = "发件方号码包含（如 1069）",
+                        onValueChange = { viewModel.updateActiveFieldPrefix(it) },
+                        onClick = { viewModel.setActiveField(ActiveField.SENDER) }
+                    )
+                }
+                item {
+                    FieldCard(
+                        fieldName = "🏷 品牌提取",
+                        dotColor = BrandColors.CAINIAO,
+                        state = fieldState(state, ActiveField.BRAND),
+                        prefix = state.brandPrefix,
+                        suffix = state.brandSuffix,
+                        onPrefixChange = { viewModel.updateActiveFieldPrefix(it) },
+                        onSuffixChange = { viewModel.updateActiveFieldSuffix(it) },
+                        onClick = { viewModel.setActiveField(ActiveField.BRAND) }
+                    )
+                }
 
                 // 实时预览：直接复用列表页的 PackageCard，样式完全一致
                 val preview = state.preview
@@ -321,6 +348,8 @@ private fun isFieldConfigured(state: EditorState, field: ActiveField): Boolean =
     ActiveField.PICKUP_CODE -> state.codePrefix.isNotEmpty() || state.codeSuffix.isNotEmpty()
     ActiveField.ADDRESS -> state.addressPrefix.isNotEmpty() || state.addressSuffix.isNotEmpty()
     ActiveField.PHONE -> state.phonePrefix.isNotEmpty() || state.phoneSuffix.isNotEmpty()
+    ActiveField.SENDER -> state.senderPattern.isNotEmpty()
+    ActiveField.BRAND -> state.brandPrefix.isNotEmpty() || state.brandSuffix.isNotEmpty()
 }
 
 private fun activeFieldLabel(field: ActiveField): String = when (field) {
@@ -328,4 +357,96 @@ private fun activeFieldLabel(field: ActiveField): String = when (field) {
     ActiveField.PICKUP_CODE -> "取件码"
     ActiveField.ADDRESS -> "地址"
     ActiveField.PHONE -> "电话"
+    ActiveField.SENDER -> "发件方"
+    ActiveField.BRAND -> "品牌"
+}
+
+/**
+ * 单输入字段卡片（senderPattern 专用）：视觉与 [FieldCard] 一致（选中抬高、左侧强调线、状态徽标），
+ * 但只有一个输入框——发件方过滤是单字符串包含匹配，不分前后缀锚点对。
+ */
+@Composable
+private fun SingleFieldCard(
+    fieldName: String,
+    dotColor: Color,
+    state: FieldCardState,
+    value: String,
+    placeholder: String,
+    onValueChange: (String) -> Unit,
+    onClick: () -> Unit
+) {
+    val elevation = if (state == FieldCardState.ACTIVE) 6.dp else 2.dp
+    val offsetX = if (state == FieldCardState.ACTIVE) 2.dp else 0.dp
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = offsetX)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (state == FieldCardState.EMPTY) Surface.copy(alpha = 0.7f) else Surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = elevation)
+    ) {
+        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+            // 左侧强调色线：与 FieldCard 同款
+            if (state != FieldCardState.EMPTY) {
+                Box(
+                    modifier = Modifier
+                        .padding(start = 10.dp, top = 14.dp, bottom = 14.dp)
+                        .fillMaxHeight()
+                        .width(3.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(Primary)
+                )
+            }
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(dotColor)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = fieldName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (state == FieldCardState.ACTIVE) Primary else TextPrimary,
+                        fontWeight = if (state == FieldCardState.ACTIVE)
+                            FontWeight.SemiBold
+                        else FontWeight.Normal
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        text = when (state) {
+                            FieldCardState.CONFIGURED -> "已配置"
+                            FieldCardState.ACTIVE -> "编辑中"
+                            FieldCardState.EMPTY -> "可选"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = when (state) {
+                            FieldCardState.CONFIGURED -> Done
+                            FieldCardState.ACTIVE -> Primary
+                            FieldCardState.EMPTY -> TextTertiary
+                        }
+                    )
+                }
+
+                if (state != FieldCardState.EMPTY || value.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = value,
+                        onValueChange = onValueChange,
+                        placeholder = { Text(placeholder, style = MaterialTheme.typography.bodySmall) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyMedium,
+                        shape = MaterialTheme.shapes.large
+                    )
+                }
+            }
+        }
+    }
 }

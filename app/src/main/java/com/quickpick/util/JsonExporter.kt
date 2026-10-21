@@ -43,11 +43,14 @@ object JsonExporter {
     private fun ruleToJson(rule: MatchRule): JsonObject {
         return JsonObject().apply {
             addProperty("name", rule.name)
+            // 发件方过滤：顶级字段，空值导出为 ""（与 fields 的空串风格一致）
+            addProperty("senderPattern", rule.senderPattern ?: "")
             add("fields", JsonObject().apply {
                 add("trackingNumber", fieldToJson(rule.trackingPrefix, rule.trackingSuffix))
                 add("pickupCode", fieldToJson(rule.codePrefix, rule.codeSuffix))
                 add("address", fieldToJson(rule.addressPrefix, rule.addressSuffix))
                 add("phone", fieldToJson(rule.phonePrefix, rule.phoneSuffix))
+                add("brand", fieldToJson(rule.brandPrefix, rule.brandSuffix))
             })
         }
     }
@@ -74,13 +77,20 @@ object JsonExporter {
         val (cp, cs) = getField("pickupCode")
         val (ap, as_) = getField("address")
         val (pp, ps) = getField("phone")
+        // 向后兼容：旧 JSON 无 fields.brand → getField 返回 null to null
+        val (bp, bs) = getField("brand")
+        // 向后兼容：旧 JSON 无顶级 senderPattern → get 返回 null；空串同样归一为 null
+        val sender = obj.get("senderPattern")?.takeIf { !it.isJsonNull }?.asString
+            ?.takeIf { it.isNotEmpty() }
 
         return MatchRule(
             name = name,
             trackingPrefix = tp, trackingSuffix = ts,
             codePrefix = cp, codeSuffix = cs,
             addressPrefix = ap, addressSuffix = as_,
-            phonePrefix = pp, phoneSuffix = ps
+            phonePrefix = pp, phoneSuffix = ps,
+            senderPattern = sender,
+            brandPrefix = bp, brandSuffix = bs
         )
     }
 
