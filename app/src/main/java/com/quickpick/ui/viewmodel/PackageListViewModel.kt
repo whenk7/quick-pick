@@ -72,7 +72,9 @@ class PackageListViewModel(application: Application) : AndroidViewModel(applicat
                 _hasPermission.value = granted
                 if (!granted) return@launch
 
-                val messages = SmsReader.readAll(getApplication())
+                // 扫描时间窗口：暂硬编码 7 天，Task 5 接 SettingsStore.scanWindowDays
+                val cutoffMs = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000
+                val messages = SmsReader.readSince(getApplication(), cutoffMs)
                 _scannedCount.value = smsRepo.scannedCount()
 
                 val rules = ruleRepo.getAll()
@@ -80,12 +82,12 @@ class PackageListViewModel(application: Application) : AndroidViewModel(applicat
 
                 messages.forEach { sms ->
                     if (smsRepo.isScanned(sms.id)) return@forEach
-                    val result = MatchEngine.findBestMatch(sms.body, rules)
+                    val result = MatchEngine.findBestMatch(sms.body, rules, sms.address)
                     if (result != null) {
                         val (rule, fields) = result
                         packageRepo.insertFromSms(
                             PackageRecord(
-                                companyName = rule.name,
+                                companyName = fields.brandName ?: rule.name,
                                 trackingNumber = fields.trackingNumber,
                                 pickupCode = fields.pickupCode,
                                 address = fields.address,
@@ -93,7 +95,8 @@ class PackageListViewModel(application: Application) : AndroidViewModel(applicat
                                 smsBody = sms.body,
                                 smsTimestamp = sms.timestamp,
                                 ruleId = rule.id,
-                                smsId = sms.id
+                                smsId = sms.id,
+                                smsThreadId = sms.threadId
                             )
                         )
                     }
