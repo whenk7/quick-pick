@@ -137,7 +137,7 @@ fun PackageListScreen(
                         onClick = { confirmAllVisible = true },
                         enabled = unpickedCount > 0,
                         colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                        shape = MaterialTheme.shapes.large,
+                        shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.weight(1f)
                     ) {
                         Text("✓ 全部已取", color = Color.White)
@@ -157,7 +157,7 @@ fun PackageListScreen(
                             Button(
                                 onClick = { permissionLauncher.launch(Manifest.permission.READ_SMS) },
                                 colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                                shape = MaterialTheme.shapes.large
+                                shape = RoundedCornerShape(16.dp)
                             ) {
                                 Text("前往授权", color = Color.White)
                             }
@@ -183,7 +183,7 @@ fun PackageListScreen(
                             Button(
                                 onClick = onGoToRules,
                                 colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                                shape = MaterialTheme.shapes.large
+                                shape = RoundedCornerShape(16.dp)
                             ) {
                                 Text("去看看规则", color = Color.White)
                             }

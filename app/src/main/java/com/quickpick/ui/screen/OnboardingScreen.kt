@@ -9,6 +9,7 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -83,7 +84,7 @@ fun OnboardingScreen(onPermissionGranted: () -> Unit) {
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
+            shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = PrimarySoft)
         ) {
             Row(
@@ -107,7 +108,7 @@ fun OnboardingScreen(onPermissionGranted: () -> Unit) {
                 onClick = onPermissionGranted,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                shape = MaterialTheme.shapes.large
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Text("开始使用", color = Color.White)
             }
@@ -116,7 +117,7 @@ fun OnboardingScreen(onPermissionGranted: () -> Unit) {
                 onClick = { launcher.launch(Manifest.permission.READ_SMS) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                shape = MaterialTheme.shapes.large
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Text("授权并开始使用", color = Color.White)
             }

@@ -94,7 +94,7 @@ fun RuleEditorScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                shape = MaterialTheme.shapes.large,
+                shape = RoundedCornerShape(16.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
@@ -123,7 +123,7 @@ fun RuleEditorScreen(
                             placeholder = { Text("从短信 App 复制一条快递短信，粘贴到这里...") },
                             modifier = Modifier.fillMaxWidth(),
                             minLines = 3,
-                            shape = MaterialTheme.shapes.large
+                            shape = RoundedCornerShape(16.dp)
                         )
                     } else {
                         TokenGrid(
@@ -154,7 +154,7 @@ fun RuleEditorScreen(
                         label = { Text("快递公司名") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        shape = MaterialTheme.shapes.large
+                        shape = RoundedCornerShape(16.dp)
                     )
                 }
 
@@ -443,7 +443,7 @@ private fun SingleFieldCard(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         textStyle = MaterialTheme.typography.bodyMedium,
-                        shape = MaterialTheme.shapes.large
+                        shape = RoundedCornerShape(16.dp)
                     )
                 }
             }

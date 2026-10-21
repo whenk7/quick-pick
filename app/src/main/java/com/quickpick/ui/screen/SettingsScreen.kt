@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -32,6 +33,9 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val conflict by settingsViewModel.conflict.collectAsStateWithLifecycle()
     val scanWindowDays by settingsViewModel.scanWindowDays.collectAsStateWithLifecycle()
+    val colorMode by settingsViewModel.colorMode.collectAsStateWithLifecycle()
+    val useMonet by settingsViewModel.useMonet.collectAsStateWithLifecycle()
+    val paletteStyle by settingsViewModel.paletteStyle.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         settingsViewModel.events.collect { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
@@ -70,11 +74,60 @@ fun SettingsScreen(
         // 短信扫描窗口：scanSms 按此值算 cutoff（默认 7 天）
         SectionTitle("短信扫描")
         listOf(7 to "一周", 30 to "一月", 90 to "三月", 180 to "半年").forEach { (days, label) ->
-            ScanWindowRow(
+            OptionRow(
                 label = label,
                 selected = scanWindowDays == days,
                 onClick = { settingsViewModel.setScanWindowDays(days) }
             )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 主题：明暗三选一 + Monet 开关 + 取色风格（Monet 开启时显示）
+        SectionTitle("主题")
+        listOf("SYSTEM" to "跟随系统", "LIGHT" to "浅色", "DARK" to "深色").forEach { (mode, label) ->
+            OptionRow(
+                label = label,
+                selected = colorMode == mode,
+                onClick = { settingsViewModel.setColorMode(mode) }
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "动态取色",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = TextPrimary
+                )
+                Text(
+                    text = "以豆绿为种子，生成随系统深浅的配色",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextTertiary
+                )
+            }
+            Switch(
+                checked = useMonet,
+                onCheckedChange = { settingsViewModel.setUseMonet(it) }
+            )
+        }
+        HorizontalDivider(color = Divider)
+        if (useMonet) {
+            listOf(
+                "TonalSpot" to "标准（TonalSpot）",
+                "Vibrant" to "鲜艳（Vibrant）",
+                "Expressive" to "表现力（Expressive）"
+            ).forEach { (style, label) ->
+                OptionRow(
+                    label = label,
+                    selected = paletteStyle == style,
+                    onClick = { settingsViewModel.setPaletteStyle(style) }
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -124,7 +177,7 @@ fun SettingsScreen(
         // 合规声明（规格要求的两处之一；另一处在权限引导页）
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
+            shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = PrimarySoft)
         ) {
             Row(
@@ -167,9 +220,9 @@ private fun SectionTitle(title: String) {
     )
 }
 
-/** 扫描窗口选项行：选中态用 Primary 色 + ✓ 标记 */
+/** 通用单选选项行（扫描窗口/明暗/取色风格）：选中态用 Primary 色 + ✓ 标记 */
 @Composable
-private fun ScanWindowRow(
+private fun OptionRow(
     label: String,
     selected: Boolean,
     onClick: () -> Unit

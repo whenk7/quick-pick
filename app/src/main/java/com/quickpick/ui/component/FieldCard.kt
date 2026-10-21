@@ -101,7 +101,7 @@ fun FieldCard(
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         textStyle = MaterialTheme.typography.bodyMedium,
-                        shape = MaterialTheme.shapes.large   // 输入框 16dp 圆角（设计系统）
+                        shape = RoundedCornerShape(16.dp)   // 输入框 16dp 圆角（设计系统）
                     )
                     Text("→", color = TextTertiary, style = MaterialTheme.typography.bodyMedium)
                     OutlinedTextField(
@@ -111,7 +111,7 @@ fun FieldCard(
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         textStyle = MaterialTheme.typography.bodyMedium,
-                        shape = MaterialTheme.shapes.large
+                        shape = RoundedCornerShape(16.dp)
                     )
                 }
             }

@@ -6,6 +6,7 @@ import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -69,7 +70,7 @@ fun AiPromptScreen(
                 placeholder = { Text("从短信 App 复制一条快递短信粘贴到这里...") },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 4,
-                shape = MaterialTheme.shapes.large
+                shape = RoundedCornerShape(16.dp)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -79,7 +80,7 @@ fun AiPromptScreen(
                 onClick = { viewModel.generatePrompt() },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                shape = MaterialTheme.shapes.large,
+                shape = RoundedCornerShape(16.dp),
                 enabled = smsText.isNotBlank()
             ) {
                 Text("生成提示词", color = Color.White)
@@ -97,7 +98,7 @@ fun AiPromptScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.large,
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = InputBackground)
                 ) {
                     Text(
@@ -117,7 +118,7 @@ fun AiPromptScreen(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                    shape = MaterialTheme.shapes.large
+                    shape = RoundedCornerShape(16.dp)
                 ) {
                     Text("📋 一键复制提示词", color = Color.White)
                 }
@@ -137,7 +138,7 @@ fun AiPromptScreen(
                     placeholder = { Text("将从 AI 网站获取的 JSON 结果粘贴到这里...") },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 5,
-                    shape = MaterialTheme.shapes.large
+                    shape = RoundedCornerShape(16.dp)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(
@@ -152,7 +153,7 @@ fun AiPromptScreen(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                    shape = MaterialTheme.shapes.large,
+                    shape = RoundedCornerShape(16.dp),
                     enabled = importedJson.isNotBlank()
                 ) {
                     Text("导入并打开规则编辑器 →", color = Color.White)
