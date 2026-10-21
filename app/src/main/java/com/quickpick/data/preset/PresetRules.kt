@@ -19,8 +19,9 @@ object PresetRules {
             phonePrefix = "电话：",
             phoneSuffix = "",
             senderPattern = "1069",
-            brandPrefix = "顺丰",
-            brandSuffix = "，",
+            // 品牌锚点 = SMS 签名括号：提取【】内完整签名（如「顺丰速运」）；无签名 → null 回退 rule.name
+            brandPrefix = "【",
+            brandSuffix = "】",
             sampleSms = "【顺丰速运】您的包裹已到达菜鸟驿站(阳光花园店)，取件码：3-2-1088，单号SF1234567890123，请尽快取件。电话：13800001234"
         ),
         MatchRuleEntity(
@@ -35,8 +36,8 @@ object PresetRules {
             phonePrefix = "联系电话",
             phoneSuffix = "，",
             senderPattern = "1069",
-            brandPrefix = "京东",
-            brandSuffix = "，",
+            brandPrefix = "【",
+            brandSuffix = "】",
             sampleSms = "【京东物流】您的订单4901234567已送达京东便利店(万达店)，取货码8-3-1024，联系电话13800005678，请尽快取件。"
         )
     )
