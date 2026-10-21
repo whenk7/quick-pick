@@ -283,23 +283,23 @@ fun RuleEditorScreen(
             }
 
             // OverlayDialog 必须组合在 miuix Scaffold 子树内（弹窗由 Scaffold 的 popupHost 渲染），
-            // 放在 content lambda 里而不是与 Scaffold 平级，否则注册不到 popupHost、弹窗不显示
-            if (rescanDialogVisible) {
-                ConfirmDialog(
-                    title = "规则已保存",
-                    message = "要用新规则重新扫描之前没匹配到的短信吗？",
-                    confirmText = "重新扫描",
-                    onConfirm = {
-                        viewModel.rescanUnmatched()
-                        rescanDialogVisible = false
-                        onBack()
-                    },
-                    onDismiss = {
-                        rescanDialogVisible = false
-                        onBack()
-                    }
-                )
-            }
+            // 放在 content lambda 里而不是与 Scaffold 平级，否则注册不到 popupHost、弹窗不显示。
+            // 常驻组合 + visible 参数：退出动画由 OverlayDialog 的 show 状态驱动，条件组合会跳过它
+            ConfirmDialog(
+                visible = rescanDialogVisible,
+                title = "规则已保存",
+                message = "要用新规则重新扫描之前没匹配到的短信吗？",
+                confirmText = "重新扫描",
+                onConfirm = {
+                    viewModel.rescanUnmatched()
+                    rescanDialogVisible = false
+                    onBack()
+                },
+                onDismiss = {
+                    rescanDialogVisible = false
+                    onBack()
+                }
+            )
         }
     }
 }

@@ -150,19 +150,22 @@ fun RuleListScreen(
     }
 
     // 删除规则：二次确认（预置也可删，文案遵循设计系统温和规范）
-    deleteTarget?.let { target ->
-        ConfirmDialog(
-            title = "删除「${target.name}」？",
-            message = "删除后将无法恢复，确定要删除吗？",
-            confirmText = "删除",
-            dangerConfirm = true,
-            onConfirm = {
-                viewModel.deleteRule(target)
-                deleteTarget = null
-            },
-            onDismiss = { deleteTarget = null }
-        )
-    }
+    // 常驻组合 + visible 参数：退出动画由 OverlayDialog 的 show 状态驱动，条件组合会跳过它。
+    // 记住最近的非 null 目标：deleteTarget 置 null 后的退场动画期间标题不闪空
+    var lastDeleteTarget by remember { mutableStateOf<MatchRule?>(null) }
+    deleteTarget?.let { lastDeleteTarget = it }
+    ConfirmDialog(
+        visible = deleteTarget != null,
+        title = "删除「${lastDeleteTarget?.name.orEmpty()}」？",
+        message = "删除后将无法恢复，确定要删除吗？",
+        confirmText = "删除",
+        dangerConfirm = true,
+        onConfirm = {
+            lastDeleteTarget?.let { viewModel.deleteRule(it) }
+            deleteTarget = null
+        },
+        onDismiss = { deleteTarget = null }
+    )
 }
 
 @Composable

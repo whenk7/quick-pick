@@ -202,16 +202,19 @@ fun SettingsScreen(
     }
 
     // 导入同名冲突：逐条裁决 覆盖/跳过（edge-cases 四）
-    conflict?.let { c ->
-        ConfirmDialog(
-            title = "发现同名规则",
-            message = "已存在「${c.incoming.name}」，要覆盖它吗？",
-            confirmText = "覆盖",
-            dismissText = "跳过",
-            onConfirm = { settingsViewModel.resolveConflict(true) },
-            onDismiss = { settingsViewModel.resolveConflict(false) }
-        )
-    }
+    // 常驻组合 + visible 参数：退出动画由 OverlayDialog 的 show 状态驱动，条件组合会跳过它。
+    // 记住最近的冲突名：conflict 置 null 后的退场动画期间文案不闪空
+    var lastConflictName by remember { mutableStateOf("") }
+    conflict?.let { lastConflictName = it.incoming.name }
+    ConfirmDialog(
+        visible = conflict != null,
+        title = "发现同名规则",
+        message = "已存在「$lastConflictName」，要覆盖它吗？",
+        confirmText = "覆盖",
+        dismissText = "跳过",
+        onConfirm = { settingsViewModel.resolveConflict(true) },
+        onDismiss = { settingsViewModel.resolveConflict(false) }
+    )
 }
 
 @Composable

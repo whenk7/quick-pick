@@ -16,11 +16,12 @@ import top.yukonga.miuix.kmp.overlay.OverlayDialog
 /**
  * 确认弹窗（miuix OverlayDialog 实现）。
  * 依赖 miuix Scaffold 的 popupHost——调用页面必须处于 miuix Scaffold 内（全站页面都满足）。
- * 调用方式保持条件组合（if (visible) ConfirmDialog(...)）：离场时 OverlayDialog 的
- * DialogState 由 popupHost 侧托管，退出动画照常播放。
+ * 调用方式：**常驻组合**（不要用 if (visible) 条件包裹），显隐交给 [visible]——
+ * OverlayDialog 内部靠 show 状态驱动进出场动画；条件组合离场会跳过退出动画（瞬间消失）。
  */
 @Composable
 fun ConfirmDialog(
+    visible: Boolean,
     title: String,
     message: String,
     confirmText: String = "确认",
@@ -30,7 +31,7 @@ fun ConfirmDialog(
     onDismiss: () -> Unit
 ) {
     OverlayDialog(
-        show = true,
+        show = visible,
         title = title,
         summary = message,
         onDismissRequest = onDismiss
