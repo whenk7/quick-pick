@@ -18,6 +18,9 @@ data class MatchRuleEntity(
     @ColumnInfo(name = "address_suffix") val addressSuffix: String? = null,
     @ColumnInfo(name = "phone_prefix") val phonePrefix: String? = null,
     @ColumnInfo(name = "phone_suffix") val phoneSuffix: String? = null,
+    @ColumnInfo(name = "sender_pattern") val senderPattern: String? = null,
+    @ColumnInfo(name = "brand_prefix") val brandPrefix: String? = null,
+    @ColumnInfo(name = "brand_suffix") val brandSuffix: String? = null,
     @ColumnInfo(name = "sample_sms") val sampleSms: String? = null,
     @ColumnInfo(name = "created_at") val createdAt: Long = System.currentTimeMillis(),
     @ColumnInfo(name = "updated_at") val updatedAt: Long = System.currentTimeMillis()

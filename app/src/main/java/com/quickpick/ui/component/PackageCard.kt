@@ -69,18 +69,6 @@ fun PackageCard(
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("✓ 已取件", style = MaterialTheme.typography.bodySmall, color = Done)
                         }
-                        // 「不完整」浅灰标签放右上角区域，不用红/橙色制造焦虑
-                        if (record.isIncomplete && !record.isPickedUp) {
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "不完整",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextTertiary,
-                                modifier = Modifier
-                                    .background(InputBackground, RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 8.dp, vertical = 2.dp)
-                            )
-                        }
                     }
                     Text(
                         text = formatRelativeTime(record.smsTimestamp),
@@ -174,14 +162,6 @@ fun PackageCard(
                         }
                         record.phone?.let { phone ->
                             DetailRow("电话", phone) { onCopyField(phone) }
-                        }
-                        if (record.isIncomplete) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "信息不完整，可以在规则页优化匹配规则",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextTertiary
-                            )
                         }
                     }
                 }

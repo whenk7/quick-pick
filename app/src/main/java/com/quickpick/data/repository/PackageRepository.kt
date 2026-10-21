@@ -52,8 +52,8 @@ class PackageRepository(private val dao: PackageRecordDao) {
         trackingNumber = trackingNumber, pickupCode = pickupCode,
         address = address, phone = phone,
         smsBody = smsBody, smsTimestamp = smsTimestamp,
-        isPickedUp = isPickedUp, isIncomplete = isIncomplete,
-        ruleId = ruleId, smsId = smsId
+        isPickedUp = isPickedUp,
+        ruleId = ruleId, smsId = smsId, smsThreadId = smsThreadId
     )
 
     private fun PackageRecord.toEntity() = PackageRecordEntity(
@@ -61,7 +61,7 @@ class PackageRepository(private val dao: PackageRecordDao) {
         trackingNumber = trackingNumber, pickupCode = pickupCode,
         address = address, phone = phone,
         smsBody = smsBody, smsTimestamp = smsTimestamp,
-        isPickedUp = isPickedUp, isIncomplete = isIncomplete,
-        ruleId = ruleId, smsId = smsId
+        isPickedUp = isPickedUp,
+        ruleId = ruleId, smsId = smsId, smsThreadId = smsThreadId
     )
 }

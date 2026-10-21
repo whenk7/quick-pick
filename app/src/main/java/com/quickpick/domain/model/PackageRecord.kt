@@ -10,7 +10,7 @@ data class PackageRecord(
     val smsBody: String,
     val smsTimestamp: Long,
     val isPickedUp: Boolean = false,
-    val isIncomplete: Boolean = false,
     val ruleId: Long? = null,
-    val smsId: String? = null
+    val smsId: String? = null,
+    val smsThreadId: Long? = null
 )

@@ -12,9 +12,12 @@ data class MatchRule(
     val addressSuffix: String? = null,
     val phonePrefix: String? = null,
     val phoneSuffix: String? = null,
+    val senderPattern: String? = null,
+    val brandPrefix: String? = null,
+    val brandSuffix: String? = null,
     val sampleSms: String? = null
 ) {
-    /** 有配置锚点的字段数 */
+    /** 有配置锚点的字段数（senderPattern/brandPrefix/brandSuffix 是过滤器/附加提取器，不计入） */
     val configuredFieldCount: Int
         get() = listOf(
             trackingPrefix != null || trackingSuffix != null,

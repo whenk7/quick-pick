@@ -92,8 +92,6 @@ class PackageListViewModel(application: Application) : AndroidViewModel(applicat
                                 phone = fields.phone,
                                 smsBody = sms.body,
                                 smsTimestamp = sms.timestamp,
-                                // 配置了但没提取到才算不完整；电话可选，不硬编码字段数
-                                isIncomplete = fields.matchedCount < rule.configuredFieldCount,
                                 ruleId = rule.id,
                                 smsId = sms.id
                             )

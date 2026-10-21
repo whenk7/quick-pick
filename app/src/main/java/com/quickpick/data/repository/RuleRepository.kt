@@ -44,6 +44,8 @@ class RuleRepository(private val dao: MatchRuleDao) {
         codePrefix = codePrefix, codeSuffix = codeSuffix,
         addressPrefix = addressPrefix, addressSuffix = addressSuffix,
         phonePrefix = phonePrefix, phoneSuffix = phoneSuffix,
+        senderPattern = senderPattern,
+        brandPrefix = brandPrefix, brandSuffix = brandSuffix,
         sampleSms = sampleSms
     )
 
@@ -53,6 +55,8 @@ class RuleRepository(private val dao: MatchRuleDao) {
         codePrefix = codePrefix, codeSuffix = codeSuffix,
         addressPrefix = addressPrefix, addressSuffix = addressSuffix,
         phonePrefix = phonePrefix, phoneSuffix = phoneSuffix,
+        senderPattern = senderPattern,
+        brandPrefix = brandPrefix, brandSuffix = brandSuffix,
         sampleSms = sampleSms,
         createdAt = System.currentTimeMillis(),
         updatedAt = System.currentTimeMillis()

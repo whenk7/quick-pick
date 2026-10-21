@@ -231,8 +231,7 @@ fun RuleEditorScreen(
                                 address = preview.address,
                                 phone = preview.phone,
                                 smsBody = state.smsText,
-                                smsTimestamp = System.currentTimeMillis(),
-                                isIncomplete = false
+                                smsTimestamp = System.currentTimeMillis()
                             ),
                             onTogglePickedUp = {},
                             onCopyField = {}

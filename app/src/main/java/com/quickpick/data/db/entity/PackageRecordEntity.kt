@@ -24,8 +24,8 @@ data class PackageRecordEntity(
     @ColumnInfo(name = "sms_body") val smsBody: String,
     @ColumnInfo(name = "sms_timestamp") val smsTimestamp: Long,
     @ColumnInfo(name = "is_picked_up") val isPickedUp: Boolean = false,
-    @ColumnInfo(name = "is_incomplete") val isIncomplete: Boolean = false,
     @ColumnInfo(name = "rule_id") val ruleId: Long? = null,
     @ColumnInfo(name = "sms_id") val smsId: String? = null,
+    @ColumnInfo(name = "sms_thread_id") val smsThreadId: Long? = null,
     @ColumnInfo(name = "created_at") val createdAt: Long = System.currentTimeMillis()
 )
