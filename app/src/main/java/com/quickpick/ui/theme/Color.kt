@@ -3,6 +3,8 @@ package com.quickpick.ui.theme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
+import top.yukonga.miuix.kmp.basic.TextFieldColors
+import top.yukonga.miuix.kmp.basic.TextFieldDefaults
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 // ============ 固定色（明暗通用，不受 Monet 影响） ============
@@ -59,6 +61,15 @@ val TextTertiary: Color @Composable @ReadOnlyComposable get() = MiuixTheme.color
 
 // 分割线
 val Divider: Color @Composable @ReadOnlyComposable get() = MiuixTheme.colorScheme.dividerLine
+
+// 输入框配色：浅灰底 + 灰标签 + 聚焦豆绿描边
+// （miuix TextField 默认 secondaryContainer 底=淡绿，会让每个输入框都泛绿，违反单强调色原则）
+val InputFieldColors: TextFieldColors
+    @Composable get() = TextFieldDefaults.textFieldColors(
+        backgroundColor = InputBackground,
+        labelColor = TextTertiary,
+        borderColor = Primary
+    )
 
 // 快递公司品牌色（小面积点缀）
 object BrandColors {

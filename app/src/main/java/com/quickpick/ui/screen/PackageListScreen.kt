@@ -12,15 +12,15 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -28,6 +28,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quickpick.ui.component.*
 import com.quickpick.ui.theme.*
 import com.quickpick.ui.viewmodel.PackageListViewModel
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.PullToRefresh
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun PackageListScreen(
@@ -42,7 +50,6 @@ fun PackageListScreen(
     val hasPermission by viewModel.hasPermission.collectAsStateWithLifecycle()
     val collapsedDays by viewModel.collapsedDays.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    var confirmAllVisible by remember { mutableStateOf(false) }
 
     // 一次性事件 → Toast
     LaunchedEffect(Unit) {
@@ -86,15 +93,15 @@ fun PackageListScreen(
     }
 
     // 外层 MainScreen 的 Scaffold 已吃 systemBars inset，内层必须置零，否则上下双份留白
-    Scaffold(contentWindowInsets = WindowInsets(0)) { padding ->
+    Scaffold(contentWindowInsets = WindowInsets(0), containerColor = Background) { padding ->
         Column(modifier = Modifier.padding(padding)) {
             // 标题栏
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
-                Text("取件宝", style = MaterialTheme.typography.headlineMedium, color = TextPrimary)
+                Text("取件宝", style = MiuixTheme.textStyles.title2, color = TextPrimary)
                 if (hasPermission && packages.isNotEmpty()) {
                     Text(
                         text = "$unpickedCount 件待取",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MiuixTheme.textStyles.body2,
                         color = TextSecondary
                     )
                 }
@@ -106,8 +113,8 @@ fun PackageListScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = InputBackground)
+                    cornerRadius = 12.dp,
+                    colors = CardDefaults.defaultColors(color = InputBackground)
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
@@ -115,32 +122,14 @@ fun PackageListScreen(
                     ) {
                         Text(
                             text = "短信权限已关闭，新快递不会更新",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MiuixTheme.textStyles.body2,
                             color = TextSecondary,
                             modifier = Modifier.weight(1f)
                         )
-                        TextButton(onClick = { permissionLauncher.launch(Manifest.permission.READ_SMS) }) {
-                            Text("去开启", color = Primary, style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                }
-            }
-
-            // 快捷操作：全部已取（无未取时置灰，edge-cases 五）
-            if (hasPermission && packages.isNotEmpty()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 6.dp)
-                ) {
-                    Button(
-                        onClick = { confirmAllVisible = true },
-                        enabled = unpickedCount > 0,
-                        colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("✓ 全部已取", color = Color.White)
+                        InlineTextButton(
+                            text = "去开启",
+                            onClick = { permissionLauncher.launch(Manifest.permission.READ_SMS) }
+                        )
                     }
                 }
             }
@@ -156,8 +145,7 @@ fun PackageListScreen(
                         action = {
                             Button(
                                 onClick = { permissionLauncher.launch(Manifest.permission.READ_SMS) },
-                                colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                                shape = RoundedCornerShape(16.dp)
+                                colors = ButtonDefaults.buttonColorsPrimary()
                             ) {
                                 Text("前往授权", color = Color.White)
                             }
@@ -182,8 +170,7 @@ fun PackageListScreen(
                         action = {
                             Button(
                                 onClick = onGoToRules,
-                                colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                                shape = RoundedCornerShape(16.dp)
+                                colors = ButtonDefaults.buttonColorsPrimary()
                             ) {
                                 Text("去看看规则", color = Color.White)
                             }
@@ -207,19 +194,24 @@ fun PackageListScreen(
                         description = "可以试试添加匹配规则，或下拉刷新",
                         modifier = Modifier.weight(1f),
                         action = {
-                            TextButton(onClick = onGoToRules) {
-                                Text("添加规则", color = Primary)
-                            }
+                            InlineTextButton(text = "添加规则", onClick = onGoToRules)
                         }
                     )
                 }
                 else -> {
                     // 下拉刷新 = 全量重扫。LazyColumn 必须在 weight(1f) 容器内，
                     // 否则拿到无限高度约束直接崩溃（初版缺陷）
-                    PullToRefreshBox(
+                    PullToRefresh(
                         isRefreshing = isScanning,
                         onRefresh = { viewModel.refresh() },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        color = Primary,
+                        refreshTexts = listOf("下拉刷新", "松开刷新", "正在刷新…", "刷新完成"),
+                        refreshTextStyle = TextStyle(
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = TextTertiary
+                        )
                     ) {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
@@ -244,18 +236,6 @@ fun PackageListScreen(
                 }
             }
         }
-    }
-
-    if (confirmAllVisible) {
-        ConfirmDialog(
-            title = "全部标记为已取？",
-            message = "把 $unpickedCount 件待取快递都标记为已取件。",
-            onConfirm = {
-                viewModel.markAllPickedUp()
-                confirmAllVisible = false
-            },
-            onDismiss = { confirmAllVisible = false }
-        )
     }
 }
 

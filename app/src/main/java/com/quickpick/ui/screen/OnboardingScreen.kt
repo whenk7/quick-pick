@@ -9,8 +9,6 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,11 +16,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.quickpick.ui.component.InlineTextButton
 import com.quickpick.ui.theme.*
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun OnboardingScreen(onPermissionGranted: () -> Unit) {
@@ -57,13 +63,14 @@ fun OnboardingScreen(onPermissionGranted: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("📦", style = MaterialTheme.typography.displayLarge)
+        // emoji 大字：原 M3 displayLarge(57sp) 无对应 miuix token，直接给字号
+        Text("📦", fontSize = 57.sp)
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
             text = "欢迎使用取件宝",
-            style = MaterialTheme.typography.headlineMedium,
+            style = MiuixTheme.textStyles.title2,
             color = TextPrimary
         )
 
@@ -74,28 +81,28 @@ fun OnboardingScreen(onPermissionGranted: () -> Unit) {
                    "✅ 所有数据仅存储在您的设备本地\n" +
                    "✅ 不上传任何信息到服务器\n" +
                    "✅ 不收集任何隐私数据",
-            style = MaterialTheme.typography.bodyMedium,
+            style = MiuixTheme.textStyles.body1,
             color = TextSecondary,
             textAlign = TextAlign.Center,
-            lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
+            lineHeight = MiuixTheme.textStyles.body1.lineHeight
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = PrimarySoft)
+            cornerRadius = 16.dp,
+            colors = CardDefaults.defaultColors(color = PrimarySoft)
         ) {
             Row(
                 modifier = Modifier.padding(16.dp),
                 verticalAlignment = Alignment.Top
             ) {
-                Text("🛡", style = MaterialTheme.typography.titleLarge)
+                Text("🛡", style = MiuixTheme.textStyles.title4)
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
                     text = "所有数据仅存储在本地，不上传、不联网、不收集任何隐私信息。",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MiuixTheme.textStyles.body2,
                     color = Primary
                 )
             }
@@ -107,8 +114,7 @@ fun OnboardingScreen(onPermissionGranted: () -> Unit) {
             Button(
                 onClick = onPermissionGranted,
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                shape = RoundedCornerShape(16.dp)
+                colors = ButtonDefaults.buttonColorsPrimary()
             ) {
                 Text("开始使用", color = Color.White)
             }
@@ -116,22 +122,23 @@ fun OnboardingScreen(onPermissionGranted: () -> Unit) {
             Button(
                 onClick = { launcher.launch(Manifest.permission.READ_SMS) },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                shape = RoundedCornerShape(16.dp)
+                colors = ButtonDefaults.buttonColorsPrimary()
             ) {
                 Text("授权并开始使用", color = Color.White)
             }
             Spacer(modifier = Modifier.height(12.dp))
             // 永久拒绝时的出口：跳本应用系统设置页
-            TextButton(onClick = {
-                context.startActivity(
-                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                        data = Uri.fromParts("package", context.packageName, null)
-                    }
-                )
-            }) {
-                Text("去系统设置开启", color = TextSecondary)
-            }
+            InlineTextButton(
+                text = "去系统设置开启",
+                textColor = TextSecondary,
+                onClick = {
+                    context.startActivity(
+                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = Uri.fromParts("package", context.packageName, null)
+                        }
+                    )
+                }
+            )
         }
     }
 }

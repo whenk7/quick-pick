@@ -1,23 +1,31 @@
 package com.quickpick.ui.screen
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quickpick.domain.model.MatchRule
 import com.quickpick.ui.component.ConfirmDialog
 import com.quickpick.ui.component.EmptyState
+import com.quickpick.ui.component.InlineTextButton
 import com.quickpick.ui.theme.*
 import com.quickpick.ui.viewmodel.RuleListViewModel
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.PressFeedbackType
 
 @Composable
 fun RuleListScreen(
@@ -33,7 +41,7 @@ fun RuleListScreen(
     var deleteTarget by remember { mutableStateOf<MatchRule?>(null) }
 
     // 内层 Scaffold 置零 inset（外层 MainScreen 已处理），否则上下双份留白
-    Scaffold(contentWindowInsets = WindowInsets(0)) { padding ->
+    Scaffold(contentWindowInsets = WindowInsets(0), containerColor = Background) { padding ->
         LazyColumn(
             modifier = Modifier.padding(padding),
             contentPadding = PaddingValues(16.dp),
@@ -44,13 +52,13 @@ fun RuleListScreen(
                 Column {
                     Text(
                         text = "匹配规则",
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = MiuixTheme.textStyles.title2,
                         color = TextPrimary,
                         modifier = Modifier.padding(bottom = 4.dp)
                     )
                     Text(
                         text = "${rules.size} 条规则，${presets.size} 个预置",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MiuixTheme.textStyles.body2,
                         color = TextSecondary,
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
@@ -62,7 +70,7 @@ fun RuleListScreen(
                 item {
                     Text(
                         text = "预置规则",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MiuixTheme.textStyles.body2,
                         color = TextTertiary,
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
@@ -85,7 +93,7 @@ fun RuleListScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "自定义规则",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MiuixTheme.textStyles.body2,
                             color = TextTertiary,
                             modifier = Modifier.padding(vertical = 4.dp)
                         )
@@ -107,7 +115,7 @@ fun RuleListScreen(
                 item {
                     Text(
                         text = "暂无自定义规则",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MiuixTheme.textStyles.body2,
                         color = TextTertiary,
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
@@ -124,20 +132,17 @@ fun RuleListScreen(
                 }
             }
 
-            // 新增按钮
+            // 新增按钮（miuix 无 OutlinedButton：透明 TextButton + 主色描边替代）
             item {
                 Column {
                     Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedButton(
+                    InlineTextButton(
+                        text = "+ 新增匹配规则",
                         onClick = onAddRule,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        border = ButtonDefaults.outlinedButtonBorder.copy(
-                            brush = androidx.compose.ui.graphics.SolidColor(Primary)
-                        )
-                    ) {
-                        Text("+ 新增匹配规则", color = Primary)
-                    }
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, Primary, RoundedCornerShape(16.dp))
+                    )
                     Spacer(modifier = Modifier.height(80.dp))
                 }
             }
@@ -173,10 +178,11 @@ private fun RuleCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .shadow(2.dp, RoundedCornerShape(16.dp)),
+        cornerRadius = 16.dp,
+        colors = CardDefaults.defaultColors(color = Surface),
+        pressFeedbackType = PressFeedbackType.Sink,
+        onClick = onClick
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -193,12 +199,12 @@ private fun RuleCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = rule.name,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MiuixTheme.textStyles.headline1,
                     color = TextPrimary
                 )
                 Text(
                     text = "${rule.configuredFieldCount} 个字段",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MiuixTheme.textStyles.body2,
                     color = TextSecondary
                 )
             }
@@ -206,7 +212,7 @@ private fun RuleCard(
             if (isPreset) {
                 Text(
                     text = "预置",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MiuixTheme.textStyles.body2,
                     color = TextSecondary,
                     modifier = Modifier
                         .background(InputBackground, RoundedCornerShape(10.dp))
@@ -216,10 +222,10 @@ private fun RuleCard(
             }
             // 操作按钮 48dp 点击区域
             IconButton(onClick = onExport, modifier = Modifier.size(48.dp)) {
-                Text("↗", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                Text("↗", style = MiuixTheme.textStyles.body1, color = TextSecondary)
             }
             IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
-                Text("🗑", style = MaterialTheme.typography.bodySmall)
+                Text("🗑", style = MiuixTheme.textStyles.body2)
             }
         }
     }

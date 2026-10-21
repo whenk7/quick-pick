@@ -2,15 +2,14 @@ package com.quickpick.ui.screen
 
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -22,6 +21,16 @@ import com.quickpick.ui.theme.*
 import com.quickpick.ui.viewmodel.ActiveField
 import com.quickpick.ui.viewmodel.EditorState
 import com.quickpick.ui.viewmodel.RuleEditorViewModel
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.PressFeedbackType
 
 @Composable
 fun RuleEditorScreen(
@@ -55,11 +64,12 @@ fun RuleEditorScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Text("←", style = MaterialTheme.typography.titleLarge)
+                    // 返回箭头字形：原依赖 titleLarge 内嵌色，T6 起显式传色
+                    Text("←", style = MiuixTheme.textStyles.title4, color = TextPrimary)
                 }
                 Text(
                     text = if (state.ruleId == 0L) "新增匹配规则" else "编辑匹配规则",
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MiuixTheme.textStyles.headline1,
                     color = TextPrimary,
                     modifier = Modifier.weight(1f)
                 )
@@ -80,50 +90,53 @@ fun RuleEditorScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                    shape = RoundedCornerShape(16.dp)
+                    colors = ButtonDefaults.buttonColorsPrimary()
                 ) {
                     Text("保存规则", color = Color.White)
                 }
             }
-        }
+        },
+        containerColor = Background
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
             // 分词区：固定在顶部不滚动（真·吸顶，两区布局实现，不依赖 stickyHeader）
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    .padding(horizontal = 16.dp)
+                    .shadow(4.dp, RoundedCornerShape(16.dp)),
+                cornerRadius = 16.dp,
+                colors = CardDefaults.defaultColors(color = Surface)
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = "点击词块填入前后缀 · 当前选中：${activeFieldLabel(state.activeField)}",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MiuixTheme.textStyles.body2,
                             color = TextTertiary,
                             modifier = Modifier.weight(1f)
                         )
                         // 已粘贴短信后提供「重新粘贴」出口，否则文本永久锁死
                         if (state.smsText.isNotEmpty()) {
-                            TextButton(onClick = {
-                                selectedToken = null
-                                viewModel.updateSmsText("")
-                            }) {
-                                Text("重新粘贴", style = MaterialTheme.typography.bodySmall, color = Primary)
-                            }
+                            InlineTextButton(
+                                text = "重新粘贴",
+                                onClick = {
+                                    selectedToken = null
+                                    viewModel.updateSmsText("")
+                                }
+                            )
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     if (state.smsText.isEmpty()) {
-                        OutlinedTextField(
+                        TextField(
                             value = state.smsText,
                             onValueChange = { viewModel.updateSmsText(it) },
-                            placeholder = { Text("从短信 App 复制一条快递短信，粘贴到这里...") },
+                            label = "从短信 App 复制一条快递短信，粘贴到这里...",
+                            useLabelAsPlaceholder = true,
                             modifier = Modifier.fillMaxWidth(),
                             minLines = 3,
-                            shape = RoundedCornerShape(16.dp)
+                            colors = InputFieldColors
                         )
                     } else {
                         TokenGrid(
@@ -148,20 +161,20 @@ fun RuleEditorScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 item {
-                    OutlinedTextField(
+                    TextField(
                         value = state.ruleName,
                         onValueChange = { viewModel.updateRuleName(it) },
-                        label = { Text("快递公司名") },
+                        label = "快递公司名",
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        shape = RoundedCornerShape(16.dp)
+                        colors = InputFieldColors
                     )
                 }
 
                 item {
                     Text(
                         text = "提取字段",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MiuixTheme.textStyles.body2,
                         color = TextTertiary
                     )
                 }
@@ -245,7 +258,7 @@ fun RuleEditorScreen(
                     item {
                         Text(
                             text = "实时预览",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MiuixTheme.textStyles.body2,
                             color = TextTertiary
                         )
                     }
@@ -268,24 +281,26 @@ fun RuleEditorScreen(
 
                 item { Spacer(modifier = Modifier.height(8.dp)) }
             }
-        }
-    }
 
-    if (rescanDialogVisible) {
-        ConfirmDialog(
-            title = "规则已保存",
-            message = "要用新规则重新扫描之前没匹配到的短信吗？",
-            confirmText = "重新扫描",
-            onConfirm = {
-                viewModel.rescanUnmatched()
-                rescanDialogVisible = false
-                onBack()
-            },
-            onDismiss = {
-                rescanDialogVisible = false
-                onBack()
+            // OverlayDialog 必须组合在 miuix Scaffold 子树内（弹窗由 Scaffold 的 popupHost 渲染），
+            // 放在 content lambda 里而不是与 Scaffold 平级，否则注册不到 popupHost、弹窗不显示
+            if (rescanDialogVisible) {
+                ConfirmDialog(
+                    title = "规则已保存",
+                    message = "要用新规则重新扫描之前没匹配到的短信吗？",
+                    confirmText = "重新扫描",
+                    onConfirm = {
+                        viewModel.rescanUnmatched()
+                        rescanDialogVisible = false
+                        onBack()
+                    },
+                    onDismiss = {
+                        rescanDialogVisible = false
+                        onBack()
+                    }
+                )
             }
-        )
+        }
     }
 }
 
@@ -382,12 +397,13 @@ private fun SingleFieldCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = offsetX)
-            .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (state == FieldCardState.EMPTY) Surface.copy(alpha = 0.7f) else Surface
+            .shadow(elevation, RoundedCornerShape(16.dp)),
+        cornerRadius = 16.dp,
+        colors = CardDefaults.defaultColors(
+            color = if (state == FieldCardState.EMPTY) Surface.copy(alpha = 0.7f) else Surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = elevation)
+        pressFeedbackType = PressFeedbackType.Sink,
+        onClick = onClick
     ) {
         Row(modifier = Modifier.height(IntrinsicSize.Min)) {
             // 左侧强调色线：与 FieldCard 同款
@@ -412,7 +428,7 @@ private fun SingleFieldCard(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = fieldName,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MiuixTheme.textStyles.body1,
                         color = if (state == FieldCardState.ACTIVE) Primary else TextPrimary,
                         fontWeight = if (state == FieldCardState.ACTIVE)
                             FontWeight.SemiBold
@@ -425,7 +441,7 @@ private fun SingleFieldCard(
                             FieldCardState.ACTIVE -> "编辑中"
                             FieldCardState.EMPTY -> "可选"
                         },
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MiuixTheme.textStyles.body2,
                         color = when (state) {
                             FieldCardState.CONFIGURED -> Done
                             FieldCardState.ACTIVE -> Primary
@@ -436,14 +452,15 @@ private fun SingleFieldCard(
 
                 if (state != FieldCardState.EMPTY || value.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedTextField(
+                    TextField(
                         value = value,
                         onValueChange = onValueChange,
-                        placeholder = { Text(placeholder, style = MaterialTheme.typography.bodySmall) },
+                        label = placeholder,
+                        useLabelAsPlaceholder = true,
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        textStyle = MaterialTheme.typography.bodyMedium,
-                        shape = RoundedCornerShape(16.dp)
+                        textStyle = MiuixTheme.textStyles.body1,
+                        colors = InputFieldColors
                     )
                 }
             }

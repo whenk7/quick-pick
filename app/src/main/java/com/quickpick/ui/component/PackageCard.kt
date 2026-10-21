@@ -7,18 +7,24 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.quickpick.domain.model.PackageRecord
 import com.quickpick.ui.theme.*
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.PressFeedbackType
 
 @Composable
 fun PackageCard(
@@ -35,14 +41,13 @@ fun PackageCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { expanded = !expanded },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (record.isPickedUp) SurfaceDone else Surface
+            .shadow(if (expanded) 4.dp else 2.dp, RoundedCornerShape(16.dp)),
+        cornerRadius = 16.dp,
+        colors = CardDefaults.defaultColors(
+            color = if (record.isPickedUp) SurfaceDone else Surface
         ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (expanded) 4.dp else 2.dp
-        )
+        pressFeedbackType = PressFeedbackType.Sink,
+        onClick = { expanded = !expanded }
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // 顶部：品牌色点 + 公司名 + 状态标签 + 时间 + 勾选圆圈
@@ -62,17 +67,17 @@ fun PackageCard(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = record.companyName,
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MiuixTheme.textStyles.headline1,
                             color = TextPrimary
                         )
                         if (record.isPickedUp) {
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("✓ 已取件", style = MaterialTheme.typography.bodySmall, color = Done)
+                            Text("✓ 已取件", style = MiuixTheme.textStyles.body2, color = Done)
                         }
                     }
                     Text(
                         text = formatRelativeTime(record.smsTimestamp),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MiuixTheme.textStyles.body2,
                         color = TextTertiary
                     )
                 }
@@ -90,7 +95,7 @@ fun PackageCard(
                         contentAlignment = Alignment.Center
                     ) {
                         if (record.isPickedUp) {
-                            Text("✓", color = Color.White, style = MaterialTheme.typography.bodySmall)
+                            Text("✓", color = Color.White, style = MiuixTheme.textStyles.body2)
                         }
                     }
                 }
@@ -99,6 +104,7 @@ fun PackageCard(
             Spacer(modifier = Modifier.height(12.dp))
 
             // 取件码 — 28sp 大字突出；已取件加删除线
+            // 颜色必须显式传（T6 起 AppTypography.title1 不再内嵌 Primary 色）
             record.pickupCode?.let { code ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -106,22 +112,20 @@ fun PackageCard(
                 ) {
                     Text(
                         text = if (code.length > 4) "取件码" else "柜号",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MiuixTheme.textStyles.body2,
                         color = TextTertiary
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = code,
-                        style = MaterialTheme.typography.headlineLarge.copy(
+                        style = MiuixTheme.textStyles.title1.copy(
                             fontFamily = FontFamily.Monospace,
                             textDecoration = if (record.isPickedUp) TextDecoration.LineThrough else null
                         ),
                         color = if (record.isPickedUp) TextSecondary else Primary
                     )
                     Spacer(modifier = Modifier.weight(1f))
-                    TextButton(onClick = { onCopyField(code) }) {
-                        Text("复制", color = Primary, style = MaterialTheme.typography.bodySmall)
-                    }
+                    InlineTextButton(text = "复制", onClick = { onCopyField(code) })
                 }
             }
 
@@ -130,7 +134,7 @@ fun PackageCard(
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = "📍 $address",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MiuixTheme.textStyles.body1,
                     color = TextSecondary,
                     modifier = Modifier
                         .alpha(contentAlpha)
@@ -178,18 +182,16 @@ private fun DetailRow(label: String, value: String, onCopy: () -> Unit) {
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
+            style = MiuixTheme.textStyles.body2,
             color = TextTertiary,
             modifier = Modifier.width(48.dp)
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MiuixTheme.textStyles.body1,
             color = TextPrimary,
             modifier = Modifier.weight(1f)
         )
-        TextButton(onClick = onCopy) {
-            Text("复制", color = Primary, style = MaterialTheme.typography.bodySmall)
-        }
+        InlineTextButton(text = "复制", onClick = onCopy)
     }
 }

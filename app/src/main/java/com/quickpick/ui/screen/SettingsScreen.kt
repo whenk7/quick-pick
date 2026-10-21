@@ -9,9 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,6 +21,12 @@ import com.quickpick.ui.component.ConfirmDialog
 import com.quickpick.ui.theme.*
 import com.quickpick.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
+import top.yukonga.miuix.kmp.basic.Switch
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun SettingsScreen(
@@ -65,7 +69,7 @@ fun SettingsScreen(
     ) {
         Text(
             text = "设置",
-            style = MaterialTheme.typography.headlineMedium,
+            style = MiuixTheme.textStyles.title2,
             color = TextPrimary
         )
 
@@ -101,12 +105,12 @@ fun SettingsScreen(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "动态取色",
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MiuixTheme.textStyles.main,
                     color = TextPrimary
                 )
                 Text(
                     text = "以豆绿为种子，生成随系统深浅的配色",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MiuixTheme.textStyles.body2,
                     color = TextTertiary
                 )
             }
@@ -177,18 +181,18 @@ fun SettingsScreen(
         // 合规声明（规格要求的两处之一；另一处在权限引导页）
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = PrimarySoft)
+            cornerRadius = 16.dp,
+            colors = CardDefaults.defaultColors(color = PrimarySoft)
         ) {
             Row(
                 modifier = Modifier.padding(16.dp),
                 verticalAlignment = Alignment.Top
             ) {
-                Text("🛡", style = MaterialTheme.typography.titleLarge)
+                Text("🛡", style = MiuixTheme.textStyles.title4)
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
                     text = "所有数据仅存储在本地，不上传、不联网、不收集任何隐私信息。",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MiuixTheme.textStyles.body2,
                     color = Primary
                 )
             }
@@ -214,7 +218,7 @@ fun SettingsScreen(
 private fun SectionTitle(title: String) {
     Text(
         text = title,
-        style = MaterialTheme.typography.bodySmall,
+        style = MiuixTheme.textStyles.body2,
         color = TextTertiary,
         modifier = Modifier.padding(vertical = 8.dp)
     )
@@ -236,12 +240,12 @@ private fun OptionRow(
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MiuixTheme.textStyles.main,
             color = if (selected) Primary else TextPrimary,
             modifier = Modifier.weight(1f)
         )
         if (selected) {
-            Text("✓", style = MaterialTheme.typography.bodyLarge, color = Primary)
+            Text("✓", style = MiuixTheme.textStyles.main, color = Primary)
         }
     }
     HorizontalDivider(color = Divider)
@@ -262,12 +266,12 @@ private fun SettingsRow(
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MiuixTheme.textStyles.main,
             color = TextPrimary,
             modifier = Modifier.weight(1f)
         )
         if (subtitle != null) {
-            Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            Text(text = subtitle, style = MiuixTheme.textStyles.body2, color = TextSecondary)
         }
         Spacer(modifier = Modifier.width(8.dp))
         Text("→", color = TextTertiary)

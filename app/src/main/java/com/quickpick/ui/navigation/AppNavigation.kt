@@ -1,11 +1,10 @@
 package com.quickpick.ui.navigation
 
 import android.content.Intent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -21,6 +20,7 @@ import com.quickpick.ui.theme.Background
 import com.quickpick.ui.viewmodel.*
 import com.quickpick.util.JsonExporter
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.Scaffold
 
 sealed class Screen(val route: String) {
     data object Onboarding : Screen("onboarding")
@@ -47,7 +47,7 @@ fun AppNavigation() {
     when (val done = onboardingDone) {
         null -> {
             // 读取中的一帧：暖米白底色，不闪白屏
-            Surface(modifier = Modifier.fillMaxSize(), color = Background) {}
+            Box(modifier = Modifier.fillMaxSize().background(Background))
         }
         else -> NavHost(
             navController = navController,
@@ -133,10 +133,12 @@ fun MainScreen(
 
     var currentTab by remember { mutableStateOf(BottomTab.PACKAGES) }
 
+    // miuix Scaffold 默认容器色是 surface（白），显式传 Background 保持暖米白底
     Scaffold(
         bottomBar = {
             BottomNavBar(currentTab = currentTab, onTabClick = { currentTab = it })
-        }
+        },
+        containerColor = Background
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             when (currentTab) {

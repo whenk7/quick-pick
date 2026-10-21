@@ -1,16 +1,22 @@
 package com.quickpick.ui.component
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.quickpick.ui.theme.*
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.PressFeedbackType
 
 enum class FieldCardState { CONFIGURED, ACTIVE, EMPTY }
 
@@ -26,6 +32,7 @@ fun FieldCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // 选中抬高阴影（原 M3 cardElevation → Modifier.shadow）
     val elevation = when (state) {
         FieldCardState.ACTIVE -> 6.dp
         else -> 2.dp
@@ -36,12 +43,13 @@ fun FieldCard(
         modifier = modifier
             .fillMaxWidth()
             .padding(start = offsetX)
-            .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (state == FieldCardState.EMPTY) Surface.copy(alpha = 0.7f) else Surface
+            .shadow(elevation, RoundedCornerShape(16.dp)),
+        cornerRadius = 16.dp,
+        colors = CardDefaults.defaultColors(
+            color = if (state == FieldCardState.EMPTY) Surface.copy(alpha = 0.7f) else Surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = elevation)
+        pressFeedbackType = PressFeedbackType.Sink,
+        onClick = onClick
     ) {
         Row(modifier = Modifier.height(IntrinsicSize.Min)) {
             // 左侧强调色线：选中态/已配置态显示，空字段不显示
@@ -66,11 +74,11 @@ fun FieldCard(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = fieldName,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MiuixTheme.textStyles.body1,
                     color = if (state == FieldCardState.ACTIVE) Primary else TextPrimary,
                     fontWeight = if (state == FieldCardState.ACTIVE)
-                        androidx.compose.ui.text.font.FontWeight.SemiBold
-                    else androidx.compose.ui.text.font.FontWeight.Normal
+                        FontWeight.SemiBold
+                    else FontWeight.Normal
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
@@ -79,7 +87,7 @@ fun FieldCard(
                         FieldCardState.ACTIVE -> "编辑中"
                         FieldCardState.EMPTY -> "可选"
                     },
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MiuixTheme.textStyles.body2,
                     color = when (state) {
                         FieldCardState.CONFIGURED -> Done
                         FieldCardState.ACTIVE -> Primary
@@ -94,24 +102,26 @@ fun FieldCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    OutlinedTextField(
+                    TextField(
                         value = prefix,
                         onValueChange = onPrefixChange,
-                        placeholder = { Text("前缀", style = MaterialTheme.typography.bodySmall) },
+                        label = "前缀",
+                        useLabelAsPlaceholder = true,
                         modifier = Modifier.weight(1f),
                         singleLine = true,
-                        textStyle = MaterialTheme.typography.bodyMedium,
-                        shape = RoundedCornerShape(16.dp)   // 输入框 16dp 圆角（设计系统）
+                        textStyle = MiuixTheme.textStyles.body1,
+                        colors = InputFieldColors
                     )
-                    Text("→", color = TextTertiary, style = MaterialTheme.typography.bodyMedium)
-                    OutlinedTextField(
+                    Text("→", color = TextTertiary, style = MiuixTheme.textStyles.body1)
+                    TextField(
                         value = suffix,
                         onValueChange = onSuffixChange,
-                        placeholder = { Text("后缀", style = MaterialTheme.typography.bodySmall) },
+                        label = "后缀",
+                        useLabelAsPlaceholder = true,
                         modifier = Modifier.weight(1f),
                         singleLine = true,
-                        textStyle = MaterialTheme.typography.bodyMedium,
-                        shape = RoundedCornerShape(16.dp)
+                        textStyle = MiuixTheme.textStyles.body1,
+                        colors = InputFieldColors
                     )
                 }
             }

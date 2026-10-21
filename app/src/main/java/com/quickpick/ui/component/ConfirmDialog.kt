@@ -1,13 +1,24 @@
 package com.quickpick.ui.component
 
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.quickpick.ui.theme.Danger
-import com.quickpick.ui.theme.Primary
-import com.quickpick.ui.theme.Surface
+import com.quickpick.ui.theme.TextSecondary
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
 
+/**
+ * 确认弹窗（miuix OverlayDialog 实现）。
+ * 依赖 miuix Scaffold 的 popupHost——调用页面必须处于 miuix Scaffold 内（全站页面都满足）。
+ * 调用方式保持条件组合（if (visible) ConfirmDialog(...)）：离场时 OverlayDialog 的
+ * DialogState 由 popupHost 侧托管，退出动画照常播放。
+ */
 @Composable
 fun ConfirmDialog(
     title: String,
@@ -18,27 +29,40 @@ fun ConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        // 显式白色容器 + 20dp 圆角：不依赖 colorScheme 槽位，杜绝默认淡紫泄漏
-        shape = RoundedCornerShape(20.dp),
-        containerColor = Surface,
-        tonalElevation = 2.dp,
-        title = {
-            Text(text = title, style = MaterialTheme.typography.titleMedium)
-        },
-        text = {
-            Text(text = message, style = MaterialTheme.typography.bodyMedium)
-        },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(text = confirmText, color = if (dangerConfirm) Danger else Primary)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(text = dismissText)
-            }
+    OverlayDialog(
+        show = true,
+        title = title,
+        summary = message,
+        onDismissRequest = onDismiss
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            TextButton(
+                text = dismissText,
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.textButtonColors(
+                    textColor = TextSecondary,
+                    disabledTextColor = TextSecondary
+                )
+            )
+            TextButton(
+                text = confirmText,
+                onClick = onConfirm,
+                modifier = Modifier.weight(1f),
+                colors = if (dangerConfirm) {
+                    ButtonDefaults.textButtonColors(
+                        color = Danger,
+                        disabledColor = Danger.copy(alpha = 0.4f),
+                        textColor = Color.White,
+                        disabledTextColor = Color.White
+                    )
+                } else {
+                    ButtonDefaults.textButtonColorsPrimary()
+                }
+            )
         }
-    )
+    }
 }

@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -13,6 +12,8 @@ import androidx.compose.ui.unit.dp
 import com.quickpick.domain.model.PackageRecord
 import com.quickpick.ui.theme.Primary
 import com.quickpick.ui.theme.TextPrimary
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -28,7 +29,6 @@ fun DayGroup(
     onMarkDayPickedUp: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var confirmVisible by remember { mutableStateOf(false) }
     // 该天无未取快递时不显示「全部已取」（edge-cases 五）
     val hasUnpicked = packages.any { !it.isPickedUp }
     // 折叠箭头轻微旋转（animateFloatAsState 默认 spring，NoBouncy 不弹跳）
@@ -49,20 +49,22 @@ fun DayGroup(
             Text(
                 text = "▾",
                 color = Primary,
-                style = MaterialTheme.typography.bodySmall,
+                style = MiuixTheme.textStyles.body2,
                 modifier = Modifier.rotate(arrowRotation)
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = dateLabel,
-                style = MaterialTheme.typography.titleLarge,
+                style = MiuixTheme.textStyles.title4,
                 color = TextPrimary,
                 modifier = Modifier.weight(1f)
             )
             if (hasUnpicked) {
-                TextButton(onClick = { confirmVisible = true }) {
-                    Text("全部已取", style = MaterialTheme.typography.bodySmall, color = Primary)
-                }
+                // 当日已取：直接执行，不弹二次确认（列表页清理，设计文档 7.4）
+                InlineTextButton(
+                    text = "全部已取",
+                    onClick = { onMarkDayPickedUp(dateMs) }
+                )
             }
         }
 
@@ -79,18 +81,6 @@ fun DayGroup(
                 }
             }
         }
-    }
-
-    if (confirmVisible) {
-        ConfirmDialog(
-            title = "全部标记为已取？",
-            message = "把「$dateLabel」的 ${packages.count { !it.isPickedUp }} 件待取快递标记为已取件。",
-            onConfirm = {
-                onMarkDayPickedUp(dateMs)
-                confirmVisible = false
-            },
-            onDismiss = { confirmVisible = false }
-        )
     }
 }
 

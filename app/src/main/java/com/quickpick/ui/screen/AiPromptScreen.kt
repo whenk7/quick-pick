@@ -6,9 +6,7 @@ import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -17,6 +15,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quickpick.ui.theme.*
 import com.quickpick.ui.viewmodel.AiPromptViewModel
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun AiPromptScreen(
@@ -40,16 +47,18 @@ fun AiPromptScreen(
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Text("←", style = MaterialTheme.typography.titleLarge)
+                    // 返回箭头字形：原依赖 titleLarge 内嵌色，T6 起显式传色
+                    Text("←", style = MiuixTheme.textStyles.title4, color = TextPrimary)
                 }
                 Text(
                     text = "AI 生成规则",
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MiuixTheme.textStyles.headline1,
                     color = TextPrimary,
                     modifier = Modifier.weight(1f)
                 )
             }
-        }
+        },
+        containerColor = Background
     ) { padding ->
         Column(
             modifier = Modifier
@@ -60,17 +69,18 @@ fun AiPromptScreen(
             // Step 1: 粘贴短信
             Text(
                 text = "第 1 步：粘贴短信",
-                style = MaterialTheme.typography.bodySmall,
+                style = MiuixTheme.textStyles.body2,
                 color = TextTertiary
             )
             Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
+            TextField(
                 value = smsText,
                 onValueChange = { viewModel.updateSmsText(it) },
-                placeholder = { Text("从短信 App 复制一条快递短信粘贴到这里...") },
+                label = "从短信 App 复制一条快递短信粘贴到这里...",
+                useLabelAsPlaceholder = true,
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 4,
-                shape = RoundedCornerShape(16.dp)
+                colors = InputFieldColors
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -79,8 +89,7 @@ fun AiPromptScreen(
             Button(
                 onClick = { viewModel.generatePrompt() },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColorsPrimary(),
                 enabled = smsText.isNotBlank()
             ) {
                 Text("生成提示词", color = Color.White)
@@ -92,19 +101,19 @@ fun AiPromptScreen(
                 // Step 2: 复制提示词
                 Text(
                     text = "第 2 步：复制提示词并去 AI 网站提问",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MiuixTheme.textStyles.body2,
                     color = TextTertiary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = InputBackground)
+                    cornerRadius = 16.dp,
+                    colors = CardDefaults.defaultColors(color = InputBackground)
                 ) {
                     Text(
                         text = prompt,
                         modifier = Modifier.padding(14.dp),
-                        style = MaterialTheme.typography.bodySmall.copy(
+                        style = MiuixTheme.textStyles.body2.copy(
                             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
                         ),
                         color = TextPrimary
@@ -117,8 +126,7 @@ fun AiPromptScreen(
                         Toast.makeText(context, "提示词已复制，去 AI 网站粘贴提问吧", Toast.LENGTH_LONG).show()
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                    shape = RoundedCornerShape(16.dp)
+                    colors = ButtonDefaults.buttonColorsPrimary()
                 ) {
                     Text("📋 一键复制提示词", color = Color.White)
                 }
@@ -128,17 +136,18 @@ fun AiPromptScreen(
                 // Step 3: 导入 JSON
                 Text(
                     text = "第 3 步：粘贴 AI 返回的 JSON",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MiuixTheme.textStyles.body2,
                     color = TextTertiary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
+                TextField(
                     value = importedJson,
                     onValueChange = { viewModel.updateImportedJson(it) },
-                    placeholder = { Text("将从 AI 网站获取的 JSON 结果粘贴到这里...") },
+                    label = "将从 AI 网站获取的 JSON 结果粘贴到这里...",
+                    useLabelAsPlaceholder = true,
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 5,
-                    shape = RoundedCornerShape(16.dp)
+                    colors = InputFieldColors
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(
@@ -152,8 +161,7 @@ fun AiPromptScreen(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColorsPrimary(),
                     enabled = importedJson.isNotBlank()
                 ) {
                     Text("导入并打开规则编辑器 →", color = Color.White)
