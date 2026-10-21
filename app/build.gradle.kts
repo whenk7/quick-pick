@@ -1,7 +1,6 @@
 // app/build.gradle.kts
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
 }
@@ -12,12 +11,12 @@ val keystoreFile = System.getenv("KEYSTORE_FILE")
 
 android {
     namespace = "com.quickpick"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.quickpick"
-        minSdk = 30
-        targetSdk = 36
+        minSdk = 33
+        targetSdk = 37
         versionCode = 1
         versionName = "1.0.0"
     }
@@ -65,17 +64,18 @@ kotlin {
 }
 
 dependencies {
-    // Compose BOM 2026.06.01（Compose 1.11.4 / M3 1.4.0）
-    // 偏差说明：分册原定 2026.09.00（Compose 1.12.1），但其 AAR 元数据要求
-    // minCompileSdk=37 + AGP≥9.1.0，与本计划 compileSdk 36 + AGP 8.13 矩阵冲突。
-    // 2026.06.01 是映射到 Compose 1.11.x（minCompileSdk=35, minAGP=8.6）的最新版 BOM。
-    val composeBom = platform("androidx.compose:compose-bom:2026.06.01")
+    // Compose BOM 2026.09.00（Compose 1.12.1 / M3 1.5.x）—— miuix 0.9.4 按 CMP 1.12.0 构建，对齐
+    // 硬要求：compileSdk 37 + AGP≥9.1（spike/miuix-align 已配齐）
+    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     // 注意：不引 material-icons-extended（图标全部用 emoji，见设计系统第九节）
+
+    // miuix 组件库（spike 冒烟：先引 ui 主模块，blur/preference 迁移时再加）
+    implementation("top.yukonga.miuix.kmp:miuix-ui-android:0.9.4")
 
     // Activity & Navigation
     implementation("androidx.activity:activity-compose:1.11.0")
