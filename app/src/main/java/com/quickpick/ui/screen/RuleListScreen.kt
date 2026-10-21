@@ -17,9 +17,11 @@ import com.quickpick.domain.model.MatchRule
 import com.quickpick.ui.component.ConfirmDialog
 import com.quickpick.ui.component.EmptyState
 import com.quickpick.ui.component.InlineTextButton
+import com.quickpick.ui.component.JsonPreviewDialog
 import com.quickpick.ui.component.glass.glassNavBarClearance
 import com.quickpick.ui.theme.*
 import com.quickpick.ui.viewmodel.RuleListViewModel
+import com.quickpick.util.JsonExporter
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -40,6 +42,8 @@ fun RuleListScreen(
     val customs = rules.filter { !it.isPreset }
     // 删除目标：非 null 时展示确认弹窗
     var deleteTarget by remember { mutableStateOf<MatchRule?>(null) }
+    // JSON 预览目标：非 null 时展示 JsonPreviewDialog（分享改为长按卡片，见 RuleCard）
+    var jsonRule by remember { mutableStateOf<MatchRule?>(null) }
 
     // 内层 Scaffold 置零 inset（外层 MainScreen 已处理），否则上下双份留白
     Scaffold(contentWindowInsets = WindowInsets(0), containerColor = Background) { padding ->
@@ -82,7 +86,8 @@ fun RuleListScreen(
                         rule = rule,
                         isPreset = true,
                         onClick = { onEditRule(rule.id) },
-                        onExport = { onExportRule(rule) },
+                        onShowJson = { jsonRule = rule },
+                        onShare = { onExportRule(rule) },
                         onDelete = { deleteTarget = rule }
                     )
                 }
@@ -106,7 +111,8 @@ fun RuleListScreen(
                         rule = rule,
                         isPreset = false,
                         onClick = { onEditRule(rule.id) },
-                        onExport = { onExportRule(rule) },
+                        onShowJson = { jsonRule = rule },
+                        onShare = { onExportRule(rule) },
                         onDelete = { deleteTarget = rule }
                     )
                 }
@@ -168,14 +174,29 @@ fun RuleListScreen(
         },
         onDismiss = { deleteTarget = null }
     )
+
+    // JSON 预览弹窗：常驻组合 + show 参数（退出动画同 ConfirmDialog 注释）。
+    // 记住最近的非 null 规则：jsonRule 置 null 后的退场动画期间内容不闪空
+    var lastJsonRule by remember { mutableStateOf<MatchRule?>(null) }
+    jsonRule?.let { lastJsonRule = it }
+    JsonPreviewDialog(
+        show = jsonRule != null,
+        json = lastJsonRule?.let { JsonExporter.exportSingle(it) } ?: "",
+        onDismiss = { jsonRule = null }
+    )
 }
 
+/**
+ * 规则卡片：点击进编辑，**长按分享**（原 ↗ 直触分享改为长按，图标位让给 `</>` JSON 预览，
+ * 避免卡片挤三个 48dp 按钮），`</>` 弹 JSON 预览，🗑 弹删除确认。
+ */
 @Composable
 private fun RuleCard(
     rule: MatchRule,
     isPreset: Boolean,
     onClick: () -> Unit,
-    onExport: () -> Unit,
+    onShowJson: () -> Unit,
+    onShare: () -> Unit,
     onDelete: () -> Unit
 ) {
     val brandColor = BrandColors.forName(rule.name)
@@ -187,7 +208,8 @@ private fun RuleCard(
         cornerRadius = 16.dp,
         colors = CardDefaults.defaultColors(color = Surface),
         pressFeedbackType = PressFeedbackType.Sink,
-        onClick = onClick
+        onClick = onClick,
+        onLongPress = onShare
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -226,8 +248,8 @@ private fun RuleCard(
                 Spacer(modifier = Modifier.width(4.dp))
             }
             // 操作按钮 48dp 点击区域
-            IconButton(onClick = onExport, modifier = Modifier.size(48.dp)) {
-                Text("↗", style = MiuixTheme.textStyles.body1, color = TextSecondary)
+            IconButton(onClick = onShowJson, modifier = Modifier.size(48.dp)) {
+                Text("</>", style = MiuixTheme.textStyles.body1, color = TextSecondary)
             }
             IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
                 Text("🗑", style = MiuixTheme.textStyles.body2)

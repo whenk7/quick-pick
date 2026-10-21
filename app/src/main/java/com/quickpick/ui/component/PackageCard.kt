@@ -1,5 +1,10 @@
 package com.quickpick.ui.component
 
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -14,6 +19,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -34,6 +40,7 @@ fun PackageCard(
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     val brandColor = BrandColors.forName(record.companyName)
     // 已取件：内容整体 50% 透明（置灰保留，不删除）
     val contentAlpha = if (record.isPickedUp) 0.5f else 1f
@@ -167,10 +174,33 @@ fun PackageCard(
                         record.phone?.let { phone ->
                             DetailRow("电话", phone) { onCopyField(phone) }
                         }
+                        // 跳原短信：仅 threadId 存在的记录显示（旧数据可能没存）
+                        record.smsThreadId?.let { threadId ->
+                            InlineTextButton(
+                                text = "查看短信",
+                                onClick = { openSmsThread(context, threadId) },
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+/**
+ * 跳到系统短信应用的对应会话。
+ * 注意：threadId 是 Telephony 会话 ID 不是手机号，必须走 content 会话 URI——
+ * `sms:$threadId` 会被短信应用当成收件人号码。无短信应用时温和兜底，不崩溃。
+ */
+private fun openSmsThread(context: Context, threadId: Long) {
+    try {
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW, Uri.parse("content://mms-sms/conversations/$threadId"))
+        )
+    } catch (e: ActivityNotFoundException) {
+        Toast.makeText(context, "无法打开短信应用", Toast.LENGTH_SHORT).show()
     }
 }
 

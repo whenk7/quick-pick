@@ -217,19 +217,29 @@ fun PackageListScreen(
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             // 底部留白给悬浮玻璃底栏（内容可滚动到栏后透出模糊；inset 动态，三键导航不遮挡）
-                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = glassNavBarClearance())
+                            // top 必须 0：contentPadding 区域不裁剪内容，吸顶 header 停在 padding 之下，
+                            // 留缝会露出滚过的卡片（header 自带 10dp 垂直内边距，视觉间距不缺）
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 0.dp, bottom = glassNavBarClearance())
                         ) {
                             groupedPackages.forEach { (dateMs, pkgs) ->
-                                item(key = "day-$dateMs") {
-                                    DayGroup(
+                                // 标题吸顶：背景实体色遮住下方滚动内容（DayGroupHeader 内处理）；
+                                // key 用 dateMs（分组键天然唯一），正文 item 加 -content 后缀避免撞 key
+                                stickyHeader(key = "day-$dateMs") {
+                                    DayGroupHeader(
                                         dateLabel = formatDayLabel(dateMs),
                                         dateMs = dateMs,
+                                        collapsed = dateMs in collapsedDays,
+                                        hasUnpicked = pkgs.any { !it.isPickedUp },
+                                        onToggleCollapse = { viewModel.toggleDayCollapse(it) },
+                                        onMarkDayPickedUp = { viewModel.markDayPickedUp(it) }
+                                    )
+                                }
+                                item(key = "day-content-$dateMs") {
+                                    DayGroupContent(
                                         packages = pkgs,
                                         collapsed = dateMs in collapsedDays,
-                                        onToggleCollapse = { viewModel.toggleDayCollapse(it) },
                                         onTogglePickedUp = { viewModel.togglePickedUp(it) },
-                                        onCopyField = { copyToClipboard(context, it) },
-                                        onMarkDayPickedUp = { viewModel.markDayPickedUp(it) }
+                                        onCopyField = { copyToClipboard(context, it) }
                                     )
                                 }
                             }
