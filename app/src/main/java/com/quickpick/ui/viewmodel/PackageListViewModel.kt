@@ -5,8 +5,12 @@ import android.app.Application
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.quickpick.QuickPickApp
+import com.quickpick.data.local.SettingsStore
 import com.quickpick.data.repository.PackageRepository
 import com.quickpick.data.repository.RuleRepository
 import com.quickpick.data.repository.SmsRepository
@@ -16,7 +20,20 @@ import com.quickpick.util.SmsReader
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-class PackageListViewModel(application: Application) : AndroidViewModel(application) {
+class PackageListViewModel(
+    application: Application,
+    private val settingsStore: SettingsStore
+) : AndroidViewModel(application) {
+
+    companion object {
+        /** 默认 Factory 只会注入 Application，SettingsStore 需自建 Factory 传入 */
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val app = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as QuickPickApp
+                PackageListViewModel(app, app.settingsStore)
+            }
+        }
+    }
 
     private val db = (application as QuickPickApp).database
     private val packageRepo = PackageRepository(db.packageRecordDao())
@@ -72,8 +89,9 @@ class PackageListViewModel(application: Application) : AndroidViewModel(applicat
                 _hasPermission.value = granted
                 if (!granted) return@launch
 
-                // 扫描时间窗口：暂硬编码 7 天，Task 5 接 SettingsStore.scanWindowDays
-                val cutoffMs = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000
+                // 扫描时间窗口：读用户偏好（默认 7 天，设置页「短信扫描」四档可调）
+                val days = settingsStore.scanWindowDays.first()
+                val cutoffMs = System.currentTimeMillis() - days * 86400000L
                 val messages = SmsReader.readSince(getApplication(), cutoffMs)
                 _scannedCount.value = smsRepo.scannedCount()
 

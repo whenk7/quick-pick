@@ -125,7 +125,8 @@ fun MainScreen(
     onNavigateToEditor: (Long) -> Unit,
     onNavigateToAi: () -> Unit
 ) {
-    val packageViewModel: PackageListViewModel = viewModel()
+    // 构造函数含 SettingsStore，默认 Factory 反射注入不了，走自建 Factory
+    val packageViewModel: PackageListViewModel = viewModel(factory = PackageListViewModel.Factory)
     val ruleListViewModel: RuleListViewModel = viewModel()
     val settingsViewModel: SettingsViewModel = viewModel()
     val context = LocalContext.current
@@ -164,7 +165,6 @@ fun MainScreen(
                 BottomTab.SETTINGS -> {
                     SettingsScreen(
                         settingsViewModel = settingsViewModel,
-                        packageViewModel = packageViewModel,
                         onOpenAiPrompt = onNavigateToAi
                     )
                 }

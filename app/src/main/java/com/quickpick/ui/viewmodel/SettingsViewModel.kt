@@ -15,9 +15,39 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val ruleRepo = RuleRepository(
         (application as QuickPickApp).database.matchRuleDao()
     )
+    private val settingsStore = (application as QuickPickApp).settingsStore
 
     val rules: StateFlow<List<MatchRule>> = ruleRepo.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // 偏好读写（初值与 SettingsStore 默认值一致）：扫描窗口 T5 用，主题三项供 T6 用
+    val scanWindowDays: StateFlow<Int> = settingsStore.scanWindowDays
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 7)
+
+    val colorMode: StateFlow<String> = settingsStore.colorMode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "SYSTEM")
+
+    val useMonet: StateFlow<Boolean> = settingsStore.useMonet
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val paletteStyle: StateFlow<String> = settingsStore.paletteStyle
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "TonalSpot")
+
+    fun setScanWindowDays(days: Int) {
+        viewModelScope.launch { settingsStore.setScanWindowDays(days) }
+    }
+
+    fun setColorMode(mode: String) {
+        viewModelScope.launch { settingsStore.setColorMode(mode) }
+    }
+
+    fun setUseMonet(enabled: Boolean) {
+        viewModelScope.launch { settingsStore.setUseMonet(enabled) }
+    }
+
+    fun setPaletteStyle(style: String) {
+        viewModelScope.launch { settingsStore.setPaletteStyle(style) }
+    }
 
     private val _events = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val events: SharedFlow<String> = _events

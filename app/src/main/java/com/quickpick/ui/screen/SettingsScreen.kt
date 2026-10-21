@@ -1,5 +1,6 @@
 package com.quickpick.ui.screen
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -19,20 +20,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quickpick.BuildConfig
 import com.quickpick.ui.component.ConfirmDialog
 import com.quickpick.ui.theme.*
-import com.quickpick.ui.viewmodel.PackageListViewModel
 import com.quickpick.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(
     settingsViewModel: SettingsViewModel,
-    packageViewModel: PackageListViewModel,
     onOpenAiPrompt: () -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val conflict by settingsViewModel.conflict.collectAsStateWithLifecycle()
-    var confirmAllVisible by remember { mutableStateOf(false) }
+    val scanWindowDays by settingsViewModel.scanWindowDays.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         settingsViewModel.events.collect { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
@@ -68,9 +67,20 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // 快捷操作（按天已取在列表页各分组标题右侧，这里不重复）
+        // 短信扫描窗口：scanSms 按此值算 cutoff（默认 7 天）
+        SectionTitle("短信扫描")
+        listOf(7 to "一周", 30 to "一月", 90 to "三月", 180 to "半年").forEach { (days, label) ->
+            ScanWindowRow(
+                label = label,
+                selected = scanWindowDays == days,
+                onClick = { settingsViewModel.setScanWindowDays(days) }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 快捷操作（「全部已取」入口在列表页，带二次确认；按天已取在各分组标题右侧）
         SectionTitle("快捷操作")
-        SettingsRow("✓ 一键全部已取", onClick = { confirmAllVisible = true })
         SettingsRow("🤖 AI 生成规则", onClick = onOpenAiPrompt)
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -98,7 +108,16 @@ fun SettingsScreen(
         // 关于
         SectionTitle("关于")
         SettingsRow("版本号", subtitle = BuildConfig.VERSION_NAME, onClick = {})
-        SettingsRow("项目地址", subtitle = "github.com/whenk7/quick-pick", onClick = {})
+        SettingsRow("项目地址", subtitle = "github.com/whenk7/quick-pick", onClick = {
+            // 无浏览器等设备差异下温和兜底，不崩溃
+            try {
+                context.startActivity(
+                    Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/whenk7/quick-pick"))
+                )
+            } catch (e: ActivityNotFoundException) {
+                Toast.makeText(context, "没找到能打开链接的应用～", Toast.LENGTH_SHORT).show()
+            }
+        })
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -125,18 +144,6 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(80.dp))
     }
 
-    if (confirmAllVisible) {
-        ConfirmDialog(
-            title = "全部标记为已取？",
-            message = "把所有待取快递标记为已取件。",
-            onConfirm = {
-                packageViewModel.markAllPickedUp()
-                confirmAllVisible = false
-            },
-            onDismiss = { confirmAllVisible = false }
-        )
-    }
-
     // 导入同名冲突：逐条裁决 覆盖/跳过（edge-cases 四）
     conflict?.let { c ->
         ConfirmDialog(
@@ -158,6 +165,33 @@ private fun SectionTitle(title: String) {
         color = TextTertiary,
         modifier = Modifier.padding(vertical = 8.dp)
     )
+}
+
+/** 扫描窗口选项行：选中态用 Primary 色 + ✓ 标记 */
+@Composable
+private fun ScanWindowRow(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = if (selected) Primary else TextPrimary,
+            modifier = Modifier.weight(1f)
+        )
+        if (selected) {
+            Text("✓", style = MaterialTheme.typography.bodyLarge, color = Primary)
+        }
+    }
+    HorizontalDivider(color = Divider)
 }
 
 @Composable
