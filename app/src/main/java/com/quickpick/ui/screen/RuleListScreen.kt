@@ -17,6 +17,7 @@ import com.quickpick.domain.model.MatchRule
 import com.quickpick.ui.component.ConfirmDialog
 import com.quickpick.ui.component.EmptyState
 import com.quickpick.ui.component.InlineTextButton
+import com.quickpick.ui.component.glass.GlassNavBarClearance
 import com.quickpick.ui.theme.*
 import com.quickpick.ui.viewmodel.RuleListViewModel
 import top.yukonga.miuix.kmp.basic.Card
@@ -44,7 +45,8 @@ fun RuleListScreen(
     Scaffold(contentWindowInsets = WindowInsets(0), containerColor = Background) { padding ->
         LazyColumn(
             modifier = Modifier.padding(padding),
-            contentPadding = PaddingValues(16.dp),
+            // 底部留白给悬浮玻璃底栏
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = GlassNavBarClearance),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // 标题（一个 item 里多个组件要包一层 Column，否则会叠在一起渲染）

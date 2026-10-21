@@ -3,24 +3,29 @@ package com.quickpick.ui.navigation
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import com.quickpick.QuickPickApp
-import com.quickpick.ui.component.BottomNavBar
 import com.quickpick.ui.component.BottomTab
+import com.quickpick.ui.component.glass.LiquidGlassNavigationBar
+import com.quickpick.ui.component.glass.rememberGlassBackdrop
 import com.quickpick.ui.screen.*
 import com.quickpick.ui.theme.Background
 import com.quickpick.ui.viewmodel.*
 import com.quickpick.util.JsonExporter
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 sealed class Screen(val route: String) {
     data object Onboarding : Screen("onboarding")
@@ -133,14 +138,30 @@ fun MainScreen(
 
     var currentTab by remember { mutableStateOf(BottomTab.PACKAGES) }
 
+    // 玻璃底栏采样源：先铺页面底色再录内容；内容全出血延伸到栏后（底部留白由各列表 contentPadding 承担）
+    val backdrop = rememberGlassBackdrop(scrimColor = Background)
+
     // miuix Scaffold 默认容器色是 surface（白），显式传 Background 保持暖米白底
     Scaffold(
         bottomBar = {
-            BottomNavBar(currentTab = currentTab, onTabClick = { currentTab = it })
+            LiquidGlassNavigationBar(
+                currentTab = currentTab,
+                onTabClick = { currentTab = it },
+                backdrop = backdrop
+            )
         },
         containerColor = Background
     ) { padding ->
-        Box(modifier = Modifier.padding(padding)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .layerBackdrop(backdrop)
+                .padding(
+                    top = padding.calculateTopPadding(),
+                    start = padding.calculateStartPadding(LocalLayoutDirection.current),
+                    end = padding.calculateEndPadding(LocalLayoutDirection.current)
+                )
+        ) {
             when (currentTab) {
                 BottomTab.PACKAGES -> {
                     PackageListScreen(

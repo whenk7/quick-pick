@@ -71,11 +71,12 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3")
+    // Material3 已随 T8 玻璃底栏完成全量迁移移除（最后一个引用是 M3 NavigationBar）
     // 注意：不引 material-icons-extended（图标全部用 emoji，见设计系统第九节）
 
-    // miuix 组件库（spike 冒烟：先引 ui 主模块，blur/preference 迁移时再加）
+    // miuix 组件库 + 玻璃模糊（悬浮玻璃底栏，T8）
     implementation("top.yukonga.miuix.kmp:miuix-ui-android:0.9.4")
+    implementation("top.yukonga.miuix.kmp:miuix-blur-android:0.9.4")
 
     // Activity & Navigation
     implementation("androidx.activity:activity-compose:1.11.0")
