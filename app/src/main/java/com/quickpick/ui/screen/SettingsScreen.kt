@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quickpick.BuildConfig
 import com.quickpick.ui.component.ConfirmDialog
-import com.quickpick.ui.component.glass.GlassNavBarClearance
+import com.quickpick.ui.component.glass.glassNavBarClearance
 import com.quickpick.ui.theme.*
 import com.quickpick.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
@@ -66,8 +66,8 @@ fun SettingsScreen(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            // 底部留白给悬浮玻璃底栏
-            .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = GlassNavBarClearance)
+            // 底部留白给悬浮玻璃底栏（inset 动态）
+            .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = glassNavBarClearance())
     ) {
         Text(
             text = "设置",

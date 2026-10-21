@@ -26,7 +26,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quickpick.ui.component.*
-import com.quickpick.ui.component.glass.GlassNavBarClearance
+import com.quickpick.ui.component.glass.glassNavBarClearance
 import com.quickpick.ui.theme.*
 import com.quickpick.ui.viewmodel.PackageListViewModel
 import top.yukonga.miuix.kmp.basic.Button
@@ -216,8 +216,8 @@ fun PackageListScreen(
                     ) {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            // 底部留白给悬浮玻璃底栏（内容可滚动到栏后透出模糊）
-                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = GlassNavBarClearance)
+                            // 底部留白给悬浮玻璃底栏（内容可滚动到栏后透出模糊；inset 动态，三键导航不遮挡）
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = glassNavBarClearance())
                         ) {
                             groupedPackages.forEach { (dateMs, pkgs) ->
                                 item(key = "day-$dateMs") {

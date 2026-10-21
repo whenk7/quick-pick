@@ -60,6 +60,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -79,8 +80,16 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sign
 
-/** 悬浮底栏占位高度（栏 64 + 距底 12 + 手势条/呼吸余量），列表底部 contentPadding 用它留白 */
-val GlassNavBarClearance = 100.dp
+/**
+ * 悬浮底栏动态占位高度（栏 64 + 距底 12 + 导航条 inset 动态读），
+ * 列表底部 contentPadding 用它留白。三键导航 inset ≈48dp，静态估算会确定性遮挡末项。
+ */
+@Composable
+fun glassNavBarClearance(): Dp =
+    76.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+/** 栏内容内边距（spec §8.4：内边距 4dp）；双排/指示器的 8dp 扣减 = BarInnerPadding * 2 */
+private val BarInnerPadding = 4.dp
 
 private val LocalTabPressScale = staticCompositionLocalOf { { 1f } }
 
@@ -130,7 +139,7 @@ fun LiquidGlassNavigationBar(
 
     fun indexAt(positionX: Float): Int {
         if (tabWidthPx == 0f) return currentIndex
-        val horizontalPaddingPx = with(density) { 4.dp.toPx() }
+        val horizontalPaddingPx = with(density) { BarInnerPadding.toPx() }
         val logicalX = if (isLtr) positionX else totalWidthPx - positionX
         return ((logicalX - horizontalPaddingPx) / tabWidthPx)
             .toInt()
@@ -272,7 +281,7 @@ fun LiquidGlassNavigationBar(
                         .selectableGroup()
                         .onSizeChanged { coords ->
                             totalWidthPx = coords.width.toFloat()
-                            val contentWidthPx = totalWidthPx - with(density) { 8.dp.toPx() }
+                            val contentWidthPx = totalWidthPx - with(density) { (BarInnerPadding * 2).toPx() }
                             tabWidthPx = (contentWidthPx / tabsCount).coerceAtLeast(0f)
                         }
                         .graphicsLayer { translationX = panelOffset }
@@ -326,7 +335,7 @@ fun LiquidGlassNavigationBar(
                         )
                         .then(dampedDrag.modifier)
                         .height(64.dp)
-                        .padding(4.dp),
+                        .padding(BarInnerPadding),
                     verticalAlignment = Alignment.CenterVertically,
                     content = tabsContent,
                 )
@@ -358,7 +367,7 @@ fun LiquidGlassNavigationBar(
                             )
                             .then(interactiveHighlight.modifier)
                             .height(56.dp)
-                            .padding(horizontal = 4.dp),
+                            .padding(horizontal = BarInnerPadding),
                         verticalAlignment = Alignment.CenterVertically,
                         content = tabsContent,
                     )
@@ -370,7 +379,7 @@ fun LiquidGlassNavigationBar(
                 if (isBlurActive) {
                     Box(
                         modifier = Modifier
-                            .padding(horizontal = 4.dp)
+                            .padding(horizontal = BarInnerPadding)
                             .graphicsLayer {
                                 val singleTabWidth = tabWidthPx
                                 val progressOffset = dampedDrag.value * singleTabWidth
@@ -418,7 +427,7 @@ fun LiquidGlassNavigationBar(
                 } else {
                     Box(
                         modifier = Modifier
-                            .padding(horizontal = 4.dp)
+                            .padding(horizontal = BarInnerPadding)
                             .graphicsLayer {
                                 val progressOffset = dampedDrag.value * tabWidthPx
                                 translationX = if (isLtr) progressOffset + panelOffset else -progressOffset + panelOffset
@@ -435,7 +444,7 @@ fun LiquidGlassNavigationBar(
                                 modifier = Modifier
                                     .clearAndSetSemantics {}
                                     .wrapContentWidth(align = Alignment.Start, unbounded = true)
-                                    .requiredWidth(with(density) { (totalWidthPx - 8.dp.toPx()).toDp() })
+                                    .requiredWidth(with(density) { (totalWidthPx - (BarInnerPadding * 2).toPx()).toDp() })
                                     .height(56.dp)
                                     .graphicsLayer {
                                         val progressOffset = dampedDrag.value * tabWidthPx
