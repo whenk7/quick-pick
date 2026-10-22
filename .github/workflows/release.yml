@@ -34,7 +34,7 @@ jobs:
           if [ ! -x "$SDKM" ]; then SDKM="$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager | head -1)"; fi
           echo "using sdkmanager: $SDKM"
           yes | "$SDKM" --licenses > /dev/null
-          "$SDKM" "platforms;android-36" "build-tools;36.0.0"
+          "$SDKM" "platforms;android-37" "build-tools;37.0.0"
 
       - name: Decode keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/keystore.jks"
@@ -53,4 +53,6 @@ jobs:
       - name: Attach to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: quickpick-${{ github.ref_name }}.apk
+          files: |
+            quickpick-${{ github.ref_name }}.apk
+            THIRD-PARTY-NOTICES.md
