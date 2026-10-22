@@ -26,7 +26,7 @@ fun TokenChip(
 ) {
     val bg = when (state) {
         TokenState.NORMAL -> InputBackground
-        TokenState.MATCHED -> Color(0xFFF2F8F2)
+        TokenState.MATCHED -> PrimarySoft   // 语义 token 明暗自适应；硬编码亮底在暗色下文字对比度不可读
         TokenState.SELECTED -> Primary
     }
     val border = when (state) {

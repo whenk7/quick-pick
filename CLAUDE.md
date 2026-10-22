@@ -94,10 +94,10 @@ UI：v1.1.0 起 M3 全面迁移到 miuix 0.9.4（ui+blur），app/src 零 materi
 ## 当前进度
 
 - ✅ v1.0.0 已发布（tag `v1.0.0`，GitHub Release 发 APK，2026-10-16；R1–R5 档案在 `.superpowers/sdd/00-master/`）
-- ✅ v1.1.0 miuix 迁移 + 引擎修复 + 功能补齐：Task 1–10 全部完成（2026-10-22，分支 `spike/miuix-align`，每 task 独立评审 clean，ledger 在 `.superpowers/sdd/2026-10-21-miuix-migration/`）
-- ✅ 全局验证：assembleRelease + lintVitalRelease 绿，APK 3.07MB 未签名（<5MB 目标），M3 引用清零
-- ⬜ miuix 新 UI 真机验收（明/暗/Monet 三态；**验收前先清应用数据**——旧 debug 机预置规则品牌锚点 seeded 是错值）
-- ⬜ 合 main → 打 tag `v1.1.0` → CI 发 APK
+- ✅ v1.1.0 miuix 迁移已发布（2026-10-22，tag `v1.1.0`，Task 1–10 + 每 task 评审 clean；ledger 在 `.superpowers/sdd/2026-10-21-miuix-migration/`）
+- ✅ 全分支终审（opus）：0 Critical / 2 Important / 7 Minor，Review Focus 5 项全过。Important 均为跨层缺陷：老记录 sms_thread_id 不随重扫回填（升级用户「查看短信」隐形）、TokenChip 命中态暗色下不可读
+- ✅ v1.1.1 修复发布（versionCode 3，两处 Important）
+- ⬜ 真机验收（清单见下一步）
 
 ## 执行模式（已和用户商定）
 
@@ -108,6 +108,6 @@ UI：v1.1.0 起 M3 全面迁移到 miuix 0.9.4（ui+blur），app/src 零 materi
 
 ## 下一步
 
-1. 真机装 `app/build/outputs/apk/debug/app-debug.apk`（先清应用数据），验收重点：明/暗/Monet 三态主题、玻璃底栏（三键导航不遮挡）、发件方过滤、品牌色点、扫描窗口、JSON 弹窗、跳原短信、长按分享、DayGroup 吸顶、弹窗退出动画
-2. 验收过 → 合 main → 打 tag `v1.1.0` → CI 发 APK；Release 附 THIRD-PARTY-NOTICES（miuix KMP + Kyant0/AndroidLiquidGlass，均 Apache-2.0）
-3. v1.1.1 候选（迁移延期 minors + v1.0.0 遗留）：BottomNavBar.kt 改名 BottomTab.kt、死代码清理（SmsReader.readAll、SettingsViewModel.rules、Color.Pending）、rememberSaveable tab、编辑器重复词块锚定增强、SCAN_WINDOWS/主题初值提常量、ScanWindowRow a11y 语义、lastJsonRule SideEffect 化、JsonPreviewDialog 加分享按钮、KSP 对齐 Kotlin 2.4.21、exportSchema 开启入库、`--warning-mode all` 定位 Gradle 10 deprecation 来源
+1. GitHub Release 下 `quickpick-v1.1.1.apk` 覆盖装真机（与 v1.0.0 同 CI 签名，无缝升级）。**先不清数据**：验 Room v1→v2 迁移（旧记录完好）+ 预置规则 onCreate 自动升级。仅当机器跑过 10-21 中间 dev build 才需清一次数据（错值品牌锚点 seeded）
+2. 验收清单：明/暗/Monet 三态主题、玻璃底栏（三键导航不遮挡）、发件方过滤、品牌色点、扫描窗口、JSON 弹窗、跳原短信、长按分享、DayGroup 吸顶、弹窗退出动画；**定向两条（验 v1.1.1 修复）**：暗色下开规则编辑器看词块三态可读、下拉重扫后老记录出现「查看短信」
+3. v1.1.2 候选（终审 7 Minor + 迁移延期项）：编辑器预览回显品牌提取、AI 提示词模板加 senderPattern/brand 字段、markAllPickedUp 三层死链、SettingsScreen:141 过时注释、扫描窗口改动即时生效、spec §8.4 玻璃栏 pill 文案对齐实现、品牌提取无闭合后缀吞正文语义、BottomNavBar.kt 改名 BottomTab.kt、死代码清理（SmsReader.readAll、SettingsViewModel.rules、Color.Pending）、rememberSaveable tab、编辑器重复词块锚定增强、SCAN_WINDOWS/主题初值提常量、ScanWindowRow a11y、lastJsonRule SideEffect 化、JsonPreviewDialog 加分享按钮、KSP 对齐 Kotlin、exportSchema 入库、`--warning-mode all` 定位 deprecation

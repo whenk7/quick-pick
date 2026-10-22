@@ -30,7 +30,17 @@ class PackageRepository(private val dao: PackageRecordDao) {
         // 同一条短信只入库一次：全量重扫（clearScanned）时的兜底去重，
         // 不依赖单号有无——无单号规则命中的短信此前每次刷新都会重复插入
         val smsId = record.smsId
-        if (smsId != null && dao.findBySmsId(smsId) != null) return
+        if (smsId != null) {
+            val existing = dao.findBySmsId(smsId)
+            if (existing != null) {
+                // v1→v2 迁移后老记录 sms_thread_id 为 NULL，重扫命中查重时回填，
+                // 否则升级用户的历史记录永远看不到「查看短信」（spec §九「重扫后补齐」）
+                if (existing.smsThreadId == null && record.smsThreadId != null) {
+                    dao.update(existing.copy(smsThreadId = record.smsThreadId))
+                }
+                return
+            }
+        }
         val tracking = record.trackingNumber
         if (!tracking.isNullOrEmpty()) {
             val existing = dao.findByTrackingAndDate(tracking, record.smsTimestamp)
