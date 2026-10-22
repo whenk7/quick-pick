@@ -8,6 +8,7 @@ local.properties
 *.iml
 .idea/
 .cxx/
+.kotlin/
 
 # 签名密钥永不入库
 *.keystore

@@ -337,7 +337,7 @@ setContent {
 ```kotlin
 val MIGRATION_1_2 = object : Migration(1, 2) {
     override fun migrate(db: SupportSQLiteDatabase) {
-        // match_rules: 加列
+        // match_rules: 加列（默认 NULL，不需要回填）
         db.execSQL("ALTER TABLE match_rules ADD COLUMN sender_pattern TEXT")
         db.execSQL("ALTER TABLE match_rules ADD COLUMN brand_prefix TEXT")
         db.execSQL("ALTER TABLE match_rules ADD COLUMN brand_suffix TEXT")
@@ -354,28 +354,34 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
                 phone TEXT,
                 sms_body TEXT NOT NULL,
                 sms_timestamp INTEGER NOT NULL,
-                is_picked_up INTEGER NOT NULL DEFAULT 0,
-                rule_id INTEGER NOT NULL DEFAULT 0,
-                sms_id TEXT NOT NULL,
+                is_picked_up INTEGER NOT NULL,
+                rule_id INTEGER,
+                sms_id TEXT,
                 sms_thread_id INTEGER,
-                created_at INTEGER NOT NULL DEFAULT 0,
-                updated_at INTEGER NOT NULL DEFAULT 0
+                created_at INTEGER NOT NULL,
+                FOREIGN KEY(rule_id) REFERENCES match_rules(id) ON UPDATE NO ACTION ON DELETE SET NULL
             )
         """)
         db.execSQL("""
             INSERT INTO package_records_new
+                (id, company_name, tracking_number, pickup_code, address, phone,
+                 sms_body, sms_timestamp, is_picked_up, rule_id, sms_id, sms_thread_id, created_at)
             SELECT id, company_name, tracking_number, pickup_code, address, phone,
-                   sms_body, sms_timestamp, is_picked_up, rule_id, sms_id, NULL, created_at, updated_at
+                   sms_body, sms_timestamp, is_picked_up, rule_id, sms_id, NULL, created_at
             FROM package_records
         """)
         db.execSQL("DROP TABLE package_records")
         db.execSQL("ALTER TABLE package_records_new RENAME TO package_records")
-        // 重建索引（如果原表有）
+        // 重建索引（对应 Entity 的 @Index 注解，索引名遵循 Room 约定）
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_package_records_sms_timestamp ON package_records (sms_timestamp)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_package_records_rule_id ON package_records (rule_id)")
     }
 }
 ```
 
-match_rules 纯加列（默认 NULL），不需要回填。package_records 加列+删 `is_incomplete` 走新表迁移。v1.0.0 用户升级后数据完好（is_incomplete 数据丢弃，UI 不再需要）。
+> 2026-10-22 已按 `AppDatabase.kt` 实际实现同步。原草案 4 处错误已修正：多写 `updated_at` 列（实际表中不存在）、`rule_id`/`sms_id`/`is_picked_up`/`created_at` 错标 NOT NULL DEFAULT（实际可空/无默认）、缺外键（SET_NULL）、INSERT SELECT 选不存在列且未显式列名。
+
+match_rules 纯加列（默认 NULL），不需要回填。package_records 加列+删 `is_incomplete` 走新表迁移。v1.0.0 用户升级后数据完好（is_incomplete 数据丢弃，UI 不再需要；sms_thread_id 回填 NULL，重扫后补齐）。
 
 ---
 

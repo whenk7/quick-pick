@@ -12,10 +12,11 @@ Android 快递取件信息管理应用。从短信自动提取取件码/柜号/�
 
 ## 技术栈
 
-Kotlin + Jetpack Compose + Material 3 + Room
-min API 30，架构 MVVM
-匹配引擎：纯字符串前后缀锚点，不用正则
-Compose BOM 实际 2026.06.01（计划写 2026.09，因其硬要求 compileSdk 37 + AGP 9.1，2026-10-16 裁决降级）
+Kotlin + Jetpack Compose + miuix KMP + Room
+min API 33（与 miuix-blur 对齐），架构 MVVM
+UI：v1.1.0 起 M3 全面迁移到 miuix 0.9.4（ui+blur），app/src 零 material3 引用，material3 gradle 依赖已移除
+匹配引擎：纯字符串前后缀锚点，不用正则；v1.1.0 加发件方过滤（senderPattern 子串，空则不过滤向后兼容）+ 品牌提取（【】锚点，BrandColors.forName contains 模糊匹配）
+版本矩阵：Kotlin 2.4.21 / Compose BOM 2026.09.00 / AGP 9.4.1 / Gradle wrapper 9.8.1 / compileSdk+targetSdk 37（旧「BOM 降级 2026.06」裁决已作废）
 
 ## 我的偏好
 
@@ -39,11 +40,13 @@ Compose BOM 实际 2026.06.01（计划写 2026.09，因其硬要求 compileSdk 3
 │   └── data-model.md                  ← Room 3 表结构
 ├── docs/superpowers/
 │   ├── specs/2026-05-30-quickpick-design.md   ← 产品规格书（权威）
+│   ├── specs/2026-10-21-miuix-migration-design.md ← miuix 迁移设计（v1.1.0 权威）
 │   ├── design/
 │   │   ├── design-system.md           ← 治愈系极简设计系统
 │   │   ├── theme.css                  ← 完整 CSS 令牌
 │   │   ├── quickpick.html + mockup-*.html  ← 页面 mockup 参考
-│   └── plans/quickpick/               ← 最终执行计划：00-master.md 总纲 + 9 个 Phase 分册
+│   ├── plans/quickpick/               ← v1.0.0 执行计划：00-master.md 总纲 + 9 个 Phase 分册
+│   └── plans/2026-10-21-miuix-migration.md  ← v1.1.0 迁移计划（10 task 全完成）
 └── app/                               ← 还没创建，计划执行时建
 ```
 
@@ -68,6 +71,7 @@ Compose BOM 实际 2026.06.01（计划写 2026.09，因其硬要求 compileSdk 3
 - 预置规则先跑 2 家（顺丰/京东），后期再决定是否扩充
 - 分发渠道：GitHub Release 侧载；不上 Google Play（READ_SMS 受限权限政策不覆盖本品类）；仅 Android，不支持鸿蒙/iOS
 - 仅处理普通文本短信
+- v1.1.0 新增：扫描窗口四档（调小不回收已入库记录）；主题明/暗/Monet 三态；长按卡片分享原文；JSON 预览弹窗 + 跳原短信会话（threadId）；悬浮玻璃底栏（blur+lens+highlight）；删设置页「全部已取」入口（列表页操作保留）
 
 ## 分支与发布
 
@@ -89,22 +93,21 @@ Compose BOM 实际 2026.06.01（计划写 2026.09，因其硬要求 compileSdk 3
 
 ## 当前进度
 
-- ✅ 产品规格
-- ✅ 设计系统
-- ✅ 实现计划（总纲+9分册）
-- ✅ 代码实现 R1–R5 全部完成（2026-10-16，SDD 流程：逐轮实现+评审+opus 终审+修复波；档案在 `.superpowers/sdd/00-master/`，含 ledger/各轮报告/评审包）
-- ⬜ 真机验收（16 项运行时清单：`.superpowers/sdd/00-master/r5-report.md` §5.4，重点：首扫、换柜覆盖、AI 导入回显、权限回收 banner、编辑保存→重扫弹窗）
-- ⬜ 真机过后打 tag `v1.0.0` + GitHub Release 发 APK
+- ✅ v1.0.0 已发布（tag `v1.0.0`，GitHub Release 发 APK，2026-10-16；R1–R5 档案在 `.superpowers/sdd/00-master/`）
+- ✅ v1.1.0 miuix 迁移 + 引擎修复 + 功能补齐：Task 1–10 全部完成（2026-10-22，分支 `spike/miuix-align`，每 task 独立评审 clean，ledger 在 `.superpowers/sdd/2026-10-21-miuix-migration/`）
+- ✅ 全局验证：assembleRelease + lintVitalRelease 绿，APK 3.07MB 未签名（<5MB 目标），M3 引用清零
+- ⬜ miuix 新 UI 真机验收（明/暗/Monet 三态；**验收前先清应用数据**——旧 debug 机预置规则品牌锚点 seeded 是错值）
+- ⬜ 合 main → 打 tag `v1.1.0` → CI 发 APK
 
 ## 执行模式（已和用户商定）
 
 - **主会话（强模型）当总控**：派活、审 diff、排障、把每轮出口标准
 - **执行 agent 用 sonnet 档**（档级映射随模型配置调整）：按分册建文件，照抄计划代码，不自由发挥
 - **评审分层**：转录轮（实现者报零偏差+构建绿）可跳独立评审，复杂轮/集成轮保留，终审用顶格模型——2026-10-16 实测：终审抓到 2 个 Critical 跨层缺陷，轮级评审的价值在确认不在发现
-- **构建环境已装好**：JDK 17（/home/wen/dev/jdk）+ Gradle 8.14.3 + SDK 36（/home/wen/Android/Sdk），local.properties 已配，`./gradlew` 可用
+- **构建环境已装好**：JDK 17.0.20（/home/wen/dev/jdk）+ Gradle wrapper 9.8.1 + SDK 37（/home/wen/Android/Sdk），local.properties 已配，`./gradlew` 可用；本地无 KEYSTORE_FILE 环境变量时 assembleRelease 产未签名包（正常，签名包由 CI 打）
 
 ## 下一步
 
-1. 真机装 `app/build/outputs/apk/debug/app-debug.apk`，过 16 项运行时验收（清单见 `.superpowers/sdd/00-master/r5-report.md` §5.4）
-2. 验收过 → 打 tag `v1.0.0` → GitHub Release 发 APK（assembleRelease 前先确认 `./gradlew lintVitalRelease` 绿）
-3. v1.0.1 候选（终审判定可延期项）：outlinedButtonBorder deprecation、rememberSaveable tab、死代码清理（SettingsViewModel.rules、Color.Pending）、「全部已取」权限门控放开、编辑器重复词块锚定增强
+1. 真机装 `app/build/outputs/apk/debug/app-debug.apk`（先清应用数据），验收重点：明/暗/Monet 三态主题、玻璃底栏（三键导航不遮挡）、发件方过滤、品牌色点、扫描窗口、JSON 弹窗、跳原短信、长按分享、DayGroup 吸顶、弹窗退出动画
+2. 验收过 → 合 main → 打 tag `v1.1.0` → CI 发 APK；Release 附 THIRD-PARTY-NOTICES（miuix KMP + Kyant0/AndroidLiquidGlass，均 Apache-2.0）
+3. v1.1.1 候选（迁移延期 minors + v1.0.0 遗留）：BottomNavBar.kt 改名 BottomTab.kt、死代码清理（SmsReader.readAll、SettingsViewModel.rules、Color.Pending）、rememberSaveable tab、编辑器重复词块锚定增强、SCAN_WINDOWS/主题初值提常量、ScanWindowRow a11y 语义、lastJsonRule SideEffect 化、JsonPreviewDialog 加分享按钮、KSP 对齐 Kotlin 2.4.21、exportSchema 开启入库、`--warning-mode all` 定位 Gradle 10 deprecation 来源
