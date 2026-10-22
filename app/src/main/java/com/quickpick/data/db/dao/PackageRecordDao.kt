@@ -20,6 +20,10 @@ interface PackageRecordDao {
     @Query("SELECT * FROM package_records WHERE sms_id = :smsId LIMIT 1")
     suspend fun findBySmsId(smsId: String): PackageRecordEntity?
 
+    /** 同码未取件记录（重复/催取提醒归并判定用；码会循环复用，已取件记录不参与归并） */
+    @Query("SELECT * FROM package_records WHERE pickup_code = :code AND is_picked_up = 0 ORDER BY sms_timestamp DESC LIMIT 1")
+    suspend fun findUnpickedByCode(code: String): PackageRecordEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(record: PackageRecordEntity): Long
 
