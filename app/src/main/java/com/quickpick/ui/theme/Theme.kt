@@ -1,5 +1,6 @@
 package com.quickpick.ui.theme
 
+import android.os.Build
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -9,121 +10,74 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quickpick.QuickPickApp
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.theme.ThemeColorSpec
 import top.yukonga.miuix.kmp.theme.ThemeController
 import top.yukonga.miuix.kmp.theme.ThemePaletteStyle
-import top.yukonga.miuix.kmp.theme.darkColorScheme as miuixDarkColorScheme
-import top.yukonga.miuix.kmp.theme.lightColorScheme as miuixLightColorScheme
 
-// ============ miuix 豆绿色板（固定配色模式；Monet 开启时被动态色板整体接管） ============
+/**
+ * 主题引擎（双路径，模式参考 InstallerX-Revived）：
+ * - FIXED：miuix 内置默认明暗板（lightColorScheme/darkColorScheme 不传参）
+ * - MONET：MonetSystem/Light/Dark；keyColor = null 走壁纸/系统调色板（动态取色开且 API≥31），
+ *   否则用用户选的种子色从 materialkolor 生成
+ * 偏好与生效值分离：风格不支持所选色彩规格时生效值回退 2021，不改写存储的偏好。
+ */
 
-private val QuickPickLightColors = miuixLightColorScheme(
-    primary = Primary,
-    onPrimary = Color.White,
-    primaryVariant = Primary,
-    onPrimaryVariant = Color.White,
-    error = Danger,
-    onError = Color.White,
-    disabledPrimary = PrimaryLight,
-    disabledOnPrimary = Color.White,
-    disabledPrimaryButton = PrimaryLight,
-    disabledOnPrimaryButton = Color.White,
-    primaryContainer = LightPrimarySoft,
-    onPrimaryContainer = Primary,
-    secondary = Primary,
-    onSecondary = Color.White,
-    secondaryContainer = LightPrimarySoft,     // 底部导航选中胶囊
-    onSecondaryContainer = Primary,
-    tertiaryContainer = LightPrimarySoft,
-    onTertiaryContainer = Primary,
-    background = LightBackground,
-    onBackground = LightTextPrimary,
-    onBackgroundVariant = LightTextSecondary,
-    surface = LightSurface,
-    onSurface = LightTextPrimary,
-    surfaceVariant = LightInputBackground,     // 输入框/浅灰底
-    onSurfaceSecondary = LightTextSecondary,
-    onSurfaceVariantSummary = LightTextTertiary,
-    onSurfaceVariantActions = LightTextTertiary,
-    disabledOnSurface = LightTextTertiary,
-    surfaceContainer = LightSurface,
-    onSurfaceContainer = LightTextPrimary,
-    onSurfaceContainerVariant = LightTextSecondary,
-    surfaceContainerHigh = LightSurfaceDone,   // 已取件置灰底
-    onSurfaceContainerHigh = LightTextSecondary,
-    surfaceContainerHighest = LightSurfaceDone,
-    onSurfaceContainerHighest = LightTextPrimary,
-    outline = LightDivider,
-    dividerLine = LightDivider
-)
+/** 色彩规格对调色板风格的支持表（miuix colorsFromSeed 内部规则，提前在 UI 层暴露用于置灰） */
+fun ThemePaletteStyle.supportedSpecs(): List<ThemeColorSpec> = when (this) {
+    ThemePaletteStyle.TonalSpot, ThemePaletteStyle.Neutral,
+    ThemePaletteStyle.Vibrant, ThemePaletteStyle.Expressive ->
+        listOf(ThemeColorSpec.Spec2021, ThemeColorSpec.Spec2025)
 
-private val QuickPickDarkColors = miuixDarkColorScheme(
-    primary = Primary,                         // 暗色下豆绿保持原色
-    onPrimary = Color.White,
-    primaryVariant = Primary,
-    onPrimaryVariant = Color.White,
-    error = Danger,
-    onError = Color.White,
-    disabledPrimary = DarkPrimarySoft,
-    disabledOnPrimary = DarkTextTertiary,
-    disabledPrimaryButton = DarkPrimarySoft,
-    disabledOnPrimaryButton = DarkTextTertiary,
-    primaryContainer = DarkPrimarySoft,
-    onPrimaryContainer = PrimaryLight,         // 暗色容器上用浅豆绿保证对比度
-    secondary = Primary,
-    onSecondary = Color.White,
-    secondaryContainer = DarkPrimarySoft,
-    onSecondaryContainer = PrimaryLight,
-    tertiaryContainer = DarkPrimarySoft,
-    onTertiaryContainer = PrimaryLight,
-    background = DarkBackground,
-    onBackground = DarkTextPrimary,
-    onBackgroundVariant = DarkTextSecondary,
-    surface = DarkSurface,
-    onSurface = DarkTextPrimary,
-    surfaceVariant = DarkInputBackground,
-    onSurfaceSecondary = DarkTextSecondary,
-    onSurfaceVariantSummary = DarkTextTertiary,
-    onSurfaceVariantActions = DarkTextTertiary,
-    disabledOnSurface = DarkTextTertiary,
-    surfaceContainer = DarkSurface,
-    onSurfaceContainer = DarkTextPrimary,
-    onSurfaceContainerVariant = DarkTextSecondary,
-    surfaceContainerHigh = DarkSurfaceDone,
-    onSurfaceContainerHigh = DarkTextSecondary,
-    surfaceContainerHighest = DarkSurfaceDone,
-    onSurfaceContainerHighest = DarkTextPrimary,
-    outline = DarkDivider,
-    dividerLine = DarkDivider
-)
+    else -> listOf(ThemeColorSpec.Spec2021)
+}
+
+/** 解析生效规格：不支持时回退，但不改写用户存的选择 */
+fun ThemePaletteStyle.effectiveSpec(preferred: ThemeColorSpec): ThemeColorSpec =
+    preferred.takeIf { it in supportedSpecs() } ?: ThemeColorSpec.Spec2021
 
 @Composable
 fun QuickPickTheme(content: @Composable () -> Unit) {
-    // 主题偏好从 DataStore 读；异步首帧用默认值（SYSTEM/关/TonalSpot），接受首帧闪烁
+    // 主题偏好从 DataStore 读；异步首帧用默认值，接受首帧闪烁（裁决，见迁移计划 Review Focus #5）
     val settingsStore = (LocalContext.current.applicationContext as QuickPickApp).settingsStore
-    val colorMode by settingsStore.colorMode.collectAsStateWithLifecycle(initialValue = "SYSTEM")
-    val useMonet by settingsStore.useMonet.collectAsStateWithLifecycle(initialValue = false)
+    val themeMode by settingsStore.themeMode.collectAsStateWithLifecycle(initialValue = "SYSTEM")
+    val themeEngine by settingsStore.themeEngine.collectAsStateWithLifecycle(initialValue = "FIXED")
+    val dynamicColor by settingsStore.dynamicColor.collectAsStateWithLifecycle(initialValue = true)
+    val seedColor by settingsStore.seedColor.collectAsStateWithLifecycle(initialValue = 0xFF3482FF.toInt())
     val paletteStyle by settingsStore.paletteStyle.collectAsStateWithLifecycle(initialValue = "TonalSpot")
+    val colorSpec by settingsStore.colorSpec.collectAsStateWithLifecycle(initialValue = "Spec2025")
 
-    val miuixColorMode = when {
-        useMonet && colorMode == "DARK" -> ColorSchemeMode.MonetDark
-        useMonet && colorMode == "LIGHT" -> ColorSchemeMode.MonetLight
-        useMonet -> ColorSchemeMode.MonetSystem
-        colorMode == "DARK" -> ColorSchemeMode.Dark
-        colorMode == "LIGHT" -> ColorSchemeMode.Light
-        else -> ColorSchemeMode.System
-    }
+    val style = ThemePaletteStyle.entries.firstOrNull { it.name == paletteStyle }
+        ?: ThemePaletteStyle.TonalSpot
+    val preferredSpec = ThemeColorSpec.entries.firstOrNull { it.name == colorSpec }
+        ?: ThemeColorSpec.Spec2025
 
     // ThemeController 属性无公开 setter，偏好变化时重建 controller 生效
-    val controller = remember(colorMode, useMonet, paletteStyle) {
-        ThemeController(
-            colorSchemeMode = miuixColorMode,
-            lightColors = QuickPickLightColors,
-            darkColors = QuickPickDarkColors,
-            // keyColor 固定豆绿：Monet 色板由品牌色生成；Color.Primary 本身不随 Monet 变
-            keyColor = if (useMonet) Primary else null,
-            paletteStyle = ThemePaletteStyle.entries.firstOrNull { it.name == paletteStyle }
-                ?: ThemePaletteStyle.TonalSpot
-        )
+    val controller = remember(themeMode, themeEngine, dynamicColor, seedColor, paletteStyle, colorSpec) {
+        if (themeEngine == "MONET") {
+            ThemeController(
+                colorSchemeMode = when (themeMode) {
+                    "LIGHT" -> ColorSchemeMode.MonetLight
+                    "DARK" -> ColorSchemeMode.MonetDark
+                    else -> ColorSchemeMode.MonetSystem
+                },
+                // keyColor=null → platformDynamicColors（壁纸/系统调色板）；否则种子色生成
+                keyColor = if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    null
+                } else {
+                    Color(seedColor)
+                },
+                paletteStyle = style,
+                colorSpec = style.effectiveSpec(preferredSpec)
+            )
+        } else {
+            ThemeController(
+                colorSchemeMode = when (themeMode) {
+                    "LIGHT" -> ColorSchemeMode.Light
+                    "DARK" -> ColorSchemeMode.Dark
+                    else -> ColorSchemeMode.System
+                }
+            )
+        }
     }
 
     MiuixTheme(controller = controller, textStyles = AppTypography) {

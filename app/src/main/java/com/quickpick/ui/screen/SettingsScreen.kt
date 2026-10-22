@@ -24,23 +24,26 @@ import com.quickpick.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
-import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.preference.ArrowPreference
+import top.yukonga.miuix.kmp.preference.WindowSpinnerPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+
+/** 扫描窗口档位（天 → 显示名） */
+private val SCAN_WINDOW_LABELS = listOf(7 to "一周", 30 to "一月", 90 to "三月", 180 to "半年")
 
 @Composable
 fun SettingsScreen(
     settingsViewModel: SettingsViewModel,
-    onOpenAiPrompt: () -> Unit
+    onOpenAiPrompt: () -> Unit,
+    onOpenTheme: () -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val conflict by settingsViewModel.conflict.collectAsStateWithLifecycle()
     val scanWindowDays by settingsViewModel.scanWindowDays.collectAsStateWithLifecycle()
-    val colorMode by settingsViewModel.colorMode.collectAsStateWithLifecycle()
-    val useMonet by settingsViewModel.useMonet.collectAsStateWithLifecycle()
-    val paletteStyle by settingsViewModel.paletteStyle.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         settingsViewModel.events.collect { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
@@ -79,61 +82,32 @@ fun SettingsScreen(
 
         // 短信扫描窗口：scanSms 按此值算 cutoff（默认 7 天）
         SectionTitle("短信扫描")
-        listOf(7 to "一周", 30 to "一月", 90 to "三月", 180 to "半年").forEach { (days, label) ->
-            OptionRow(
-                label = label,
-                selected = scanWindowDays == days,
-                onClick = { settingsViewModel.setScanWindowDays(days) }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            cornerRadius = 16.dp
+        ) {
+            WindowSpinnerPreference(
+                title = "扫描范围",
+                summary = "只扫描该时间段内的短信",
+                items = SCAN_WINDOW_LABELS.map { DropdownItem(title = it.second) },
+                selectedIndex = SCAN_WINDOW_LABELS.indexOfFirst { it.first == scanWindowDays }.coerceAtLeast(0),
+                onSelectedIndexChange = { settingsViewModel.setScanWindowDays(SCAN_WINDOW_LABELS[it].first) }
             )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 主题：明暗三选一 + Monet 开关 + 取色风格（Monet 开启时显示）
-        SectionTitle("主题")
-        listOf("SYSTEM" to "跟随系统", "LIGHT" to "浅色", "DARK" to "深色").forEach { (mode, label) ->
-            OptionRow(
-                label = label,
-                selected = colorMode == mode,
-                onClick = { settingsViewModel.setColorMode(mode) }
-            )
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+        // 主题与外观：独立页面（模式/引擎/种子色/风格/规格 + 玻璃底栏调参）
+        SectionTitle("外观")
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            cornerRadius = 16.dp
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "动态取色",
-                    style = MiuixTheme.textStyles.main,
-                    color = TextPrimary
-                )
-                Text(
-                    text = "以豆绿为种子，生成随系统深浅的配色",
-                    style = MiuixTheme.textStyles.body2,
-                    color = TextTertiary
-                )
-            }
-            Switch(
-                checked = useMonet,
-                onCheckedChange = { settingsViewModel.setUseMonet(it) }
+            ArrowPreference(
+                title = "主题与外观",
+                summary = "主题模式、配色引擎、玻璃底栏",
+                onClick = onOpenTheme
             )
-        }
-        HorizontalDivider(color = Divider)
-        if (useMonet) {
-            listOf(
-                "TonalSpot" to "标准（TonalSpot）",
-                "Vibrant" to "鲜艳（Vibrant）",
-                "Expressive" to "表现力（Expressive）"
-            ).forEach { (style, label) ->
-                OptionRow(
-                    label = label,
-                    selected = paletteStyle == style,
-                    onClick = { settingsViewModel.setPaletteStyle(style) }
-                )
-            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -227,33 +201,6 @@ private fun SectionTitle(title: String) {
         color = TextTertiary,
         modifier = Modifier.padding(vertical = 8.dp)
     )
-}
-
-/** 通用单选选项行（扫描窗口/明暗/取色风格）：选中态用 Primary 色 + ✓ 标记 */
-@Composable
-private fun OptionRow(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            style = MiuixTheme.textStyles.main,
-            color = if (selected) Primary else TextPrimary,
-            modifier = Modifier.weight(1f)
-        )
-        if (selected) {
-            Text("✓", style = MiuixTheme.textStyles.main, color = Primary)
-        }
-    }
-    HorizontalDivider(color = Divider)
 }
 
 @Composable

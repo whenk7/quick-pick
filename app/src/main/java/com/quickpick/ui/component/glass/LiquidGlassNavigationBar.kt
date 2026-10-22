@@ -1,7 +1,7 @@
 // 悬浮玻璃底栏。移植自 miuix 官方 example 的 IosLiquidGlassNavigationBar（Apache-2.0），简化点：
 // - Tab 数据源换成本项目的 BottomTab（emoji + 文案），去掉 Badge/键盘导航/iOS 平台分支
 // - 距底固定 12dp + 手势条 inset（spec §8.4），不再按平台区分
-// 玻璃参数全部按 spec §8.4 表：blur 4dp、lens 24dp、容器色 40% 透明、spring(1f, 300f, 0.5f)。
+// 玻璃强度四旋钮由设置页调节（GlassTuning），基线：blur 4dp、lens 24dp、容器 40% 不透明。
 package com.quickpick.ui.component.glass
 
 import androidx.compose.animation.core.Animatable
@@ -93,12 +93,21 @@ private val BarInnerPadding = 4.dp
 
 private val LocalTabPressScale = staticCompositionLocalOf { { 1f } }
 
+/** 玻璃底栏强度旋钮（全部 0..1，设置页滑杆直写；映射见函数内注释） */
+data class GlassTuning(
+    val blur: Float = 0.6f,       // → 模糊半径 2..12dp
+    val lens: Float = 0.55f,      // → 折射 12..36dp（选中 pill 的按压折射按比例跟随）
+    val highlight: Float = 0.85f, // → 高光 alpha 0.4..1.0
+    val clarity: Float = 0.8f,    // → 容器不透明度 0.6..0.25（越高越透）
+)
+
 @Composable
 fun LiquidGlassNavigationBar(
     currentTab: BottomTab,
     onTabClick: (BottomTab) -> Unit,
     backdrop: LayerBackdrop,
     modifier: Modifier = Modifier,
+    tuning: GlassTuning = GlassTuning(),
 ) {
     val items = BottomTab.entries
     val selectedIndex = currentTab.ordinal
@@ -110,7 +119,11 @@ fun LiquidGlassNavigationBar(
     val accentColor = MiuixTheme.colorScheme.primary
     val tabContentColor = MiuixTheme.colorScheme.onSurface
     val surfaceContainer = MiuixTheme.colorScheme.surfaceContainer
-    val containerColor = if (isBlurActive) surfaceContainer.copy(alpha = 0.4f) else surfaceContainer
+    val containerAlpha = lerp(0.6f, 0.25f, tuning.clarity)
+    val containerColor = if (isBlurActive) surfaceContainer.copy(alpha = containerAlpha) else surfaceContainer
+    val blurRadiusDp = lerp(2f, 12f, tuning.blur)
+    val lensDp = lerp(12f, 36f, tuning.lens)
+    val highlightAlpha = lerp(0.4f, 1f, tuning.highlight)
 
     val tabsBackdrop = rememberLayerBackdrop()
     val density = LocalDensity.current
@@ -300,19 +313,19 @@ fun LiquidGlassNavigationBar(
                                     backdrop = backdrop,
                                     shape = { pillShape },
                                     effects = {
-                                        // 24dp 折射 + 16dp 按压放大余量，需在 blur() 读取前抬高
+                                        // 折射 + 16dp 按压放大余量，需在 blur() 读取前抬高
                                         padding = maxOf(padding, 40.dp.toPx())
                                         vibrancy()
                                         blur(
-                                            4.dp.toPx(),
-                                            4.dp.toPx(),
+                                            blurRadiusDp.dp.toPx(),
+                                            blurRadiusDp.dp.toPx(),
                                         )
                                         lens(
-                                            refractionHeight = 24.dp.toPx(),
-                                            refractionAmount = 24.dp.toPx(),
+                                            refractionHeight = lensDp.dp.toPx(),
+                                            refractionAmount = lensDp.dp.toPx(),
                                         )
                                     },
-                                    highlight = { baseHighlight.value.copy(alpha = 0.75f) },
+                                    highlight = { baseHighlight.value.copy(alpha = highlightAlpha) },
                                     layerBlock = {
                                         val width = size.width.coerceAtLeast(1f)
                                         val s = lerp(1f, 1f + 16.dp.toPx() / width, dampedDrag.pressProgress)
@@ -357,10 +370,10 @@ fun LiquidGlassNavigationBar(
                                 shape = { pillShape },
                                 effects = {
                                     vibrancy()
-                                    blur(4.dp.toPx(), 4.dp.toPx())
+                                    blur(blurRadiusDp.dp.toPx(), blurRadiusDp.dp.toPx())
                                     lens(
-                                        refractionHeight = 24.dp.toPx(),
-                                        refractionAmount = 24.dp.toPx(),
+                                        refractionHeight = lensDp.dp.toPx(),
+                                        refractionAmount = lensDp.dp.toPx(),
                                     )
                                 },
                                 onDrawSurface = { drawRect(containerColor) },
@@ -390,14 +403,16 @@ fun LiquidGlassNavigationBar(
                                 shape = { pillShape },
                                 effects = {
                                     val progress = dampedDrag.pressProgress
+                                    // 按压折射按主折射强度等比缩放（基线 24dp → 10/14dp）
+                                    val k = lensDp / 24f
                                     lens(
-                                        refractionHeight = 10.dp.toPx() * progress,
-                                        refractionAmount = 14.dp.toPx() * progress,
+                                        refractionHeight = 10.dp.toPx() * k * progress,
+                                        refractionAmount = 14.dp.toPx() * k * progress,
                                         depthEffect = true,
                                         chromaticAberration = 0.5f,
                                     )
                                 },
-                                highlight = { pillHighlight.value.copy(alpha = dampedDrag.pressProgress) },
+                                highlight = { pillHighlight.value.copy(alpha = dampedDrag.pressProgress * highlightAlpha) },
                                 layerBlock = {
                                     scaleX = dampedDrag.scaleX
                                     scaleY = dampedDrag.scaleY
@@ -433,7 +448,7 @@ fun LiquidGlassNavigationBar(
                                 translationX = if (isLtr) progressOffset + panelOffset else -progressOffset + panelOffset
                             }
                             .clip(pillShape)
-                            // 选中态 pill：豆绿 12%（spec §8.4；example 原值 15%，按 spec 收）
+                            // 选中态 pill：主题色 12%（example 原值 15%，按设计收；降级路径用，blur 可用时不可达）
                             .background(accentColor.copy(alpha = 0.12f), pillShape)
                             .height(56.dp)
                             .width(tabWidthDp),

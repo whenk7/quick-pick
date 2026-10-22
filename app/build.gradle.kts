@@ -77,6 +77,8 @@ dependencies {
     // miuix 组件库 + 玻璃模糊（悬浮玻璃底栏，T8）
     implementation("top.yukonga.miuix.kmp:miuix-ui-android:0.9.4")
     implementation("top.yukonga.miuix.kmp:miuix-blur-android:0.9.4")
+    // 设置项组件（WindowSpinnerPreference/SwitchPreference 等，主题设置页用）
+    implementation("top.yukonga.miuix.kmp:miuix-preference-android:0.9.4")
 
     // Activity & Navigation
     implementation("androidx.activity:activity-compose:1.11.0")

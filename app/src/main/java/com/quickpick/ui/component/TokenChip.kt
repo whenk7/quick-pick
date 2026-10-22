@@ -31,7 +31,7 @@ fun TokenChip(
     }
     val border = when (state) {
         TokenState.NORMAL -> Color.Transparent
-        TokenState.MATCHED -> Primary     // 绿色边框表示已被规则匹配
+        TokenState.MATCHED -> Primary     // 主题色边框表示已被规则匹配
         TokenState.SELECTED -> Primary
     }
     val fg = when (state) {

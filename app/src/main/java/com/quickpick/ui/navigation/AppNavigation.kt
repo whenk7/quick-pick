@@ -11,12 +11,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import com.quickpick.QuickPickApp
 import com.quickpick.ui.component.BottomTab
+import com.quickpick.ui.component.glass.GlassTuning
 import com.quickpick.ui.component.glass.LiquidGlassNavigationBar
 import com.quickpick.ui.component.glass.rememberGlassBackdrop
 import com.quickpick.ui.screen.*
@@ -34,6 +36,7 @@ sealed class Screen(val route: String) {
         fun createRoute(ruleId: Long = 0L) = "rule_editor/$ruleId"
     }
     data object AiPrompt : Screen("ai_prompt")
+    data object ThemeSettings : Screen("theme_settings")
 }
 
 @Composable
@@ -74,6 +77,9 @@ fun AppNavigation() {
                     },
                     onNavigateToAi = {
                         navController.navigate(Screen.AiPrompt.route)
+                    },
+                    onNavigateToTheme = {
+                        navController.navigate(Screen.ThemeSettings.route)
                     }
                 )
             }
@@ -121,6 +127,14 @@ fun AppNavigation() {
                     onBack = { navController.popBackStack() }
                 )
             }
+
+            composable(Screen.ThemeSettings.route) {
+                val viewModel: SettingsViewModel = viewModel()
+                ThemeSettingsScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() }
+                )
+            }
         }
     }
 }
@@ -128,7 +142,8 @@ fun AppNavigation() {
 @Composable
 fun MainScreen(
     onNavigateToEditor: (Long) -> Unit,
-    onNavigateToAi: () -> Unit
+    onNavigateToAi: () -> Unit,
+    onNavigateToTheme: () -> Unit
 ) {
     // 构造函数含 SettingsStore，默认 Factory 反射注入不了，走自建 Factory
     val packageViewModel: PackageListViewModel = viewModel(factory = PackageListViewModel.Factory)
@@ -138,16 +153,28 @@ fun MainScreen(
 
     var currentTab by remember { mutableStateOf(BottomTab.PACKAGES) }
 
+    // 玻璃底栏四旋钮（主题与外观页调节，全局即时生效）
+    val glassBlur by settingsViewModel.glassBlur.collectAsStateWithLifecycle()
+    val glassLens by settingsViewModel.glassLens.collectAsStateWithLifecycle()
+    val glassHighlight by settingsViewModel.glassHighlight.collectAsStateWithLifecycle()
+    val glassAlpha by settingsViewModel.glassAlpha.collectAsStateWithLifecycle()
+
     // 玻璃底栏采样源：先铺页面底色再录内容；内容全出血延伸到栏后（底部留白由各列表 contentPadding 承担）
     val backdrop = rememberGlassBackdrop(scrimColor = Background)
 
-    // miuix Scaffold 默认容器色是 surface（白），显式传 Background 保持暖米白底
+    // miuix Scaffold 默认容器色是 surface（白），显式传 Background 保持页面底色
     Scaffold(
         bottomBar = {
             LiquidGlassNavigationBar(
                 currentTab = currentTab,
                 onTabClick = { currentTab = it },
-                backdrop = backdrop
+                backdrop = backdrop,
+                tuning = GlassTuning(
+                    blur = glassBlur,
+                    lens = glassLens,
+                    highlight = glassHighlight,
+                    clarity = glassAlpha
+                )
             )
         },
         containerColor = Background
@@ -188,7 +215,8 @@ fun MainScreen(
                 BottomTab.SETTINGS -> {
                     SettingsScreen(
                         settingsViewModel = settingsViewModel,
-                        onOpenAiPrompt = onNavigateToAi
+                        onOpenAiPrompt = onNavigateToAi,
+                        onOpenTheme = onNavigateToTheme
                     )
                 }
             }
