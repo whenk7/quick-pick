@@ -15,7 +15,8 @@ Android 快递取件信息管理应用。从短信自动提取取件码/柜号/�
 Kotlin + Jetpack Compose + miuix KMP + Room
 min API 33（与 miuix-blur 对齐），架构 MVVM
 UI：v1.1.0 起 M3 全面迁移到 miuix 0.9.4（ui+blur），app/src 零 material3 引用，material3 gradle 依赖已移除
-匹配引擎：纯字符串前后缀锚点，不用正则；v1.1.0 加发件方过滤（senderPattern 子串，空则不过滤向后兼容）+ 品牌提取（【】锚点，BrandColors.forName contains 模糊匹配）
+匹配引擎：纯字符串前后缀锚点，不用正则；v1.1.0 加发件方过滤（senderPattern 子串，空则不过滤向后兼容）+ 品牌提取（【】锚点，BrandColors.forName contains 模糊匹配）；v1.1.2 E1：suffix 配了没命中 → null（旧版取文末灌垃圾），suffix 留空仍取文末
+测试：JVM 单测（domain 层纯 Kotlin，不用 Robolectric），`./gradlew testDebugUnitTest`；语料测试 50 条真实短信 + 变体（app/src/test/java/com/quickpick/corpus/），CI 发版前必跑
 版本矩阵：Kotlin 2.4.21 / Compose BOM 2026.09.00 / AGP 9.4.1 / Gradle wrapper 9.8.1 / compileSdk+targetSdk 37（旧「BOM 降级 2026.06」裁决已作废）
 
 ## 我的偏好
@@ -110,4 +111,4 @@ UI：v1.1.0 起 M3 全面迁移到 miuix 0.9.4（ui+blur），app/src 零 materi
 
 1. GitHub Release 下 `quickpick-v1.1.1.apk` 覆盖装真机（与 v1.0.0 同 CI 签名，无缝升级）。**先不清数据**：验 Room v1→v2 迁移（旧记录完好）+ 预置规则 onCreate 自动升级。仅当机器跑过 10-21 中间 dev build 才需清一次数据（错值品牌锚点 seeded）
 2. 验收清单：明/暗/Monet 三态主题、玻璃底栏（三键导航不遮挡）、发件方过滤、品牌色点、扫描窗口、JSON 弹窗、跳原短信、长按分享、DayGroup 吸顶、弹窗退出动画；**定向两条（验 v1.1.1 修复）**：暗色下开规则编辑器看词块三态可读、下拉重扫后老记录出现「查看短信」
-3. v1.1.2 候选（终审 7 Minor + 迁移延期项）：编辑器预览回显品牌提取、AI 提示词模板加 senderPattern/brand 字段、markAllPickedUp 三层死链、SettingsScreen:141 过时注释、扫描窗口改动即时生效、spec §8.4 玻璃栏 pill 文案对齐实现、品牌提取无闭合后缀吞正文语义、BottomNavBar.kt 改名 BottomTab.kt、死代码清理（SmsReader.readAll、SettingsViewModel.rules、Color.Pending）、rememberSaveable tab、编辑器重复词块锚定增强、SCAN_WINDOWS/主题初值提常量、ScanWindowRow a11y、lastJsonRule SideEffect 化、JsonPreviewDialog 加分享按钮、KSP 对齐 Kotlin、exportSchema 入库、`--warning-mode all` 定位 deprecation
+3. v1.1.2 候选（终审 7 Minor + 语料测试发现 + 迁移延期项）：**F1 预置顺丰锚点「到达」→「已到达」+ preset_v3 升级**（营销短信可误报，语料无顺丰/京东实样故未盲调）、**F2/E2 品牌升格为过滤条件**（退货「取货码」短信与圆通/妈妈驿站锚点不可区分）、编辑器预览回显品牌提取、AI 提示词模板加 senderPattern/brand 字段、markAllPickedUp 三层死链、SettingsScreen:141 过时注释、扫描窗口改动即时生效、spec §8.4 玻璃栏 pill 文案对齐实现、品牌提取无闭合后缀吞正文语义（E1 已修同类问题，品牌字段特化）、BottomNavBar.kt 改名 BottomTab.kt、死代码清理（SmsReader.readAll、SettingsViewModel.rules、Color.Pending）、rememberSaveable tab、编辑器重复词块锚定增强、SCAN_WINDOWS/主题初值提常量、ScanWindowRow a11y、lastJsonRule SideEffect 化、JsonPreviewDialog 加分享按钮、KSP 对齐 Kotlin、exportSchema 入库、`--warning-mode all` 定位 deprecation
