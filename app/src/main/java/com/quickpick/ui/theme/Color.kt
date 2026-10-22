@@ -3,6 +3,7 @@ package com.quickpick.ui.theme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import top.yukonga.miuix.kmp.basic.TextFieldColors
 import top.yukonga.miuix.kmp.basic.TextFieldDefaults
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -18,7 +19,17 @@ val Background: Color @Composable @ReadOnlyComposable get() = MiuixTheme.colorSc
 val Surface: Color @Composable @ReadOnlyComposable get() = MiuixTheme.colorScheme.surface
 val SurfaceDone: Color @Composable @ReadOnlyComposable get() = MiuixTheme.colorScheme.surfaceContainerHigh
 val InputBackground: Color @Composable @ReadOnlyComposable get() = MiuixTheme.colorScheme.surfaceVariant
-val PrimarySoft: Color @Composable @ReadOnlyComposable get() = MiuixTheme.colorScheme.primaryContainer
+
+/**
+ * 主题色弱容器（小面积强调底：命中词块、提示卡）。
+ * 不能用 primaryContainer——miuix 内置板它是高饱和强色，会成一坨实色块；
+ * 以 primary 12% 混入 surface 合成实体色（不透底），Monet/固定板下都柔和。
+ */
+val PrimarySoft: Color
+    @Composable @ReadOnlyComposable get() = run {
+        val scheme = MiuixTheme.colorScheme
+        scheme.primary.copy(alpha = 0.12f).compositeOver(scheme.surface)
+    }
 
 // 文字
 val TextPrimary: Color @Composable @ReadOnlyComposable get() = MiuixTheme.colorScheme.onBackground

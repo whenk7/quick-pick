@@ -20,11 +20,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup JDK 17
+      - name: Setup JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'   # miuix class 是 Java 21 字节码，单测 JVM 需要；AGP 构建 17+ 即可
 
       # ubuntu-latest runner 预装 Android SDK + cmdline-tools，无需第三方 action
       # （android-actions/setup-android@v3 会在 sdkmanager 协议确认处卡死，已踩过）

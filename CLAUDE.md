@@ -16,7 +16,8 @@ Kotlin + Jetpack Compose + miuix KMP + Room
 min API 33（与 miuix-blur 对齐），架构 MVVM
 UI：v1.1.0 起 M3 全面迁移到 miuix 0.9.4（ui+blur），app/src 零 material3 引用，material3 gradle 依赖已移除
 匹配引擎：纯字符串前后缀锚点，不用正则；v1.1.0 加发件方过滤（senderPattern 子串，空则不过滤向后兼容）+ 品牌提取（【】锚点，BrandColors.forName contains 模糊匹配）；v1.1.2 E1：suffix 配了没命中 → null（旧版取文末灌垃圾），suffix 留空仍取文末
-测试：JVM 单测（domain 层纯 Kotlin，不用 Robolectric），`./gradlew testDebugUnitTest`；语料测试 50 条真实短信 + 变体（app/src/test/java/com/quickpick/corpus/），CI 发版前必跑
+测试：JVM 单测（domain 层纯 Kotlin + Repository FakeDao），`./gradlew testDebugUnitTest`；语料测试 50 条真实短信 + 变体（app/src/test/java/com/quickpick/corpus/），CI 发版前必跑
+界面渲染审查（无头环境）：`./gradlew recordRoborazziDebug` 把关键界面渲成 PNG 到 `app/build/outputs/review/`（Roborazzi+Robolectric，miuix 是 Java 21 字节码故单测 JVM 跑 21；本机 21 路径在 ~/.gradle/gradle.properties）
 版本矩阵：Kotlin 2.4.21 / Compose BOM 2026.09.00 / AGP 9.4.1 / Gradle wrapper 9.8.1 / compileSdk+targetSdk 37（旧「BOM 降级 2026.06」裁决已作废）
 
 ## 我的偏好
@@ -99,17 +100,18 @@ UI：v1.1.0 起 M3 全面迁移到 miuix 0.9.4（ui+blur），app/src 零 materi
 - ✅ v1.1.0 miuix 迁移已发布（2026-10-22，tag `v1.1.0`，Task 1–10 + 每 task 评审 clean；ledger 在 `.superpowers/sdd/2026-10-21-miuix-migration/`）
 - ✅ 全分支终审（opus）：0 Critical / 2 Important / 7 Minor，Review Focus 5 项全过。Important 均为跨层缺陷：老记录 sms_thread_id 不随重扫回填（升级用户「查看短信」隐形）、TokenChip 命中态暗色下不可读
 - ✅ v1.1.1 修复发布（versionCode 3，两处 Important）
-- ⬜ 真机验收（清单见下一步）
+- ✅ v1.1.2（versionCode 4）：引擎 E1（suffix 未命中判 null）+ 无单号重复/催取归并 + 主题系统重做（双引擎/主题页/玻璃调参/豆绿清洗）+ JVM 测试基建（45 例 + Roborazzi 渲染审查）
+- ⬜ 真机验收（清单见下一步；主题页/Monet/玻璃滑杆重点过目）
 
 ## 执行模式（已和用户商定）
 
 - **主会话（强模型）当总控**：派活、审 diff、排障、把每轮出口标准
 - **执行 agent 用 sonnet 档**（档级映射随模型配置调整）：按分册建文件，照抄计划代码，不自由发挥
 - **评审分层**：转录轮（实现者报零偏差+构建绿）可跳独立评审，复杂轮/集成轮保留，终审用顶格模型——2026-10-16 实测：终审抓到 2 个 Critical 跨层缺陷，轮级评审的价值在确认不在发现
-- **构建环境已装好**：JDK 17.0.20（/home/wen/dev/jdk）+ Gradle wrapper 9.8.1 + SDK 37（/home/wen/Android/Sdk），local.properties 已配，`./gradlew` 可用；本地无 KEYSTORE_FILE 环境变量时 assembleRelease 产未签名包（正常，签名包由 CI 打）
+- **构建环境已装好**：JDK 17.0.20 构建 + JDK 21.0.12 单测（都在 /home/wen/dev/jdk）+ Gradle wrapper 9.8.1 + SDK 37（/home/wen/Android/Sdk，注意平台包名是 android-37.0 不是 android-37），local.properties 已配，`./gradlew` 可用；本地无 KEYSTORE_FILE 环境变量时 assembleRelease 产未签名包（正常，签名包由 CI 打）
 
 ## 下一步
 
-1. GitHub Release 下 `quickpick-v1.1.1.apk` 覆盖装真机（与 v1.0.0 同 CI 签名，无缝升级）。**先不清数据**：验 Room v1→v2 迁移（旧记录完好）+ 预置规则 onCreate 自动升级。仅当机器跑过 10-21 中间 dev build 才需清一次数据（错值品牌锚点 seeded）
+1. GitHub Release 下 `quickpick-v1.1.2.apk` 覆盖装真机（与 v1.0.0 同 CI 签名，无缝升级）。**先不清数据**：验 Room v1→v2 迁移（旧记录完好）+ 预置规则 onCreate 自动升级。仅当机器跑过 10-21 中间 dev build 才需清一次数据（错值品牌锚点 seeded）
 2. 验收清单：明/暗/Monet 三态主题、玻璃底栏（三键导航不遮挡）、发件方过滤、品牌色点、扫描窗口、JSON 弹窗、跳原短信、长按分享、DayGroup 吸顶、弹窗退出动画；**定向两条（验 v1.1.1 修复）**：暗色下开规则编辑器看词块三态可读、下拉重扫后老记录出现「查看短信」
 3. v1.1.2 候选（终审 7 Minor + 语料测试发现 + 迁移延期项）：**F1 预置顺丰锚点「到达」→「已到达」+ preset_v3 升级**（营销短信可误报，语料无顺丰/京东实样故未盲调）、**F2/E2 品牌升格为过滤条件**（退货「取货码」短信与圆通/妈妈驿站锚点不可区分）、编辑器预览回显品牌提取、AI 提示词模板加 senderPattern/brand 字段、markAllPickedUp 三层死链、SettingsScreen:141 过时注释、扫描窗口改动即时生效、spec §8.4 玻璃栏 pill 文案对齐实现、品牌提取无闭合后缀吞正文语义（E1 已修同类问题，品牌字段特化）、BottomNavBar.kt 改名 BottomTab.kt、死代码清理（SmsReader.readAll、SettingsViewModel.rules、Color.Pending）、rememberSaveable tab、编辑器重复词块锚定增强、SCAN_WINDOWS/主题初值提常量、ScanWindowRow a11y、lastJsonRule SideEffect 化、JsonPreviewDialog 加分享按钮、KSP 对齐 Kotlin、exportSchema 入库、`--warning-mode all` 定位 deprecation

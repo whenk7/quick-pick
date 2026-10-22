@@ -3,6 +3,8 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
+    // 界面渲染审查：./gradlew recordRoborazziDebug 出 PNG（无头环境验收用）
+    id("io.github.takahirom.roborazzi") version "1.77.0"
 }
 
 // CI 签名接线：全部密钥从环境变量读取（GitHub Actions secret 注入）。
@@ -17,8 +19,8 @@ android {
         applicationId = "com.quickpick"
         minSdk = 33
         targetSdk = 37
-        versionCode = 3
-        versionName = "1.1.1"
+        versionCode = 4
+        versionName = "1.1.2"
     }
 
     signingConfigs {
@@ -53,6 +55,11 @@ android {
         buildConfig = true   // 设置页显示 BuildConfig.VERSION_NAME
     }
 
+    testOptions {
+        // Robolectric/Roborazzi 渲染审查需要读 Android 资源
+        unitTests.isIncludeAndroidResources = true
+    }
+
     packaging {
         resources.excludes += "META-INF/{AL2.0,LGPL2.1}"
     }
@@ -61,6 +68,12 @@ android {
 // Kotlin 2.x 推荐写法，替代已废弃的 android.kotlinOptions
 kotlin {
     jvmToolchain(17)
+}
+
+// miuix 0.9.4 的 class 是 Java 21 字节码——Robolectric 渲染测试要加载它，
+// 单测统一跑 21（纯 Kotlin 测试不受影响）。本机 21 在 ~/.gradle/gradle.properties 登记，CI 直接装 21。
+tasks.withType<Test> {
+    javaLauncher = javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) }
 }
 
 dependencies {
@@ -107,4 +120,8 @@ dependencies {
 
     // 单元测试：domain 层纯 Kotlin，JUnit4 直接跑 JVM（kotlin-test 版本随 Kotlin 插件）
     testImplementation(kotlin("test-junit"))
+    // 界面渲染审查：无头环境把 Compose 渲成 PNG 供人工看图验收（不进 APK）
+    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.77.0")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.77.0")
+    testImplementation("org.robolectric:robolectric:4.17")
 }
