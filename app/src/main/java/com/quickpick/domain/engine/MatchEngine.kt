@@ -40,12 +40,14 @@ object MatchEngine {
         val remaining = text.substring(contentStart)
 
         val raw = if (suffix.isNullOrEmpty()) {
-            // 无后缀：取到文本末尾
+            // 后缀未配置：取到文本末尾（有意为之）
             remaining
         } else {
             val endIndex = remaining.indexOf(suffix)
-            // 后缀没找到：取到文本末尾
-            if (endIndex == -1) remaining else remaining.substring(0, endIndex)
+            // 后缀配了但没找到：判未匹配（E1）。旧行为取到文末会把整段垃圾灌进字段，
+            // 且垃圾计入 matchedCount 干扰 findBestMatch 优先级
+            if (endIndex == -1) return null
+            remaining.substring(0, endIndex)
         }
         // 空串视为未匹配（前缀后紧跟后缀 / 只有空白），否则会污染 matchedCount 优先级比较
         return raw.trim().ifEmpty { null }

@@ -102,4 +102,7 @@ dependencies {
 
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
+
+    // 单元测试：domain 层纯 Kotlin，JUnit4 直接跑 JVM（kotlin-test 版本随 Kotlin 插件）
+    testImplementation(kotlin("test-junit"))
 }
