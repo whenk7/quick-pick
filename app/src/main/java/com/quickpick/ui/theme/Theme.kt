@@ -2,11 +2,14 @@ package com.quickpick.ui.theme
 
 import android.os.Build
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
+import androidx.navigationevent.compose.rememberNavigationEventDispatcherOwner
 import com.quickpick.QuickPickApp
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -80,7 +83,13 @@ fun QuickPickTheme(content: @Composable () -> Unit) {
         }
     }
 
+    // miuix 窗口弹层（WindowSpinner/ListPopup 等）内的 NavigationBackHandler 要求
+    // LocalNavigationEventDispatcherOwner；activity-compose 1.11 不提供，缺了点击即崩
+    // （v1.1.2 设置页闪退根因，点击复现测试钉在 SettingsClickTest）
+    val navEventOwner = rememberNavigationEventDispatcherOwner(parent = null)
     MiuixTheme(controller = controller, textStyles = AppTypography) {
-        content()
+        CompositionLocalProvider(LocalNavigationEventDispatcherOwner provides navEventOwner) {
+            content()
+        }
     }
 }
