@@ -107,9 +107,15 @@ fun PackageCard(
         return
     }
 
-    // 未取件：三行紧凑卡
+    // 未取件：三行紧凑卡 + 左滑标记已取件（露出动画，阈值 35%）
+    SwipeToReveal(
+        actionLabel = "✓ 已取件",
+        actionColor = Primary,
+        modifier = modifier,
+        onTrigger = onTogglePickedUp
+    ) {
     Card(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
             .shadow(2.dp, RoundedCornerShape(16.dp))
             .combinedClickable(
@@ -193,6 +199,7 @@ fun PackageCard(
                 )
             }
         }
+    }
     }
 
     // 短信原文弹窗：常驻组合 + show 参数（退出动画约定同 ConfirmDialog）
