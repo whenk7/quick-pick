@@ -302,6 +302,8 @@ fun RuleListScreen(
         message = "已存在「$lastConflictName」，要覆盖它吗？",
         confirmText = "覆盖",
         dismissText = "跳过",
+        // 裁决弹窗（v1.1.7 §2）：返回/点外部无效，必须明确选覆盖或跳过
+        swallowBack = true,
         onConfirm = { viewModel.resolveConflict(true) },
         onDismiss = { viewModel.resolveConflict(false) }
     )

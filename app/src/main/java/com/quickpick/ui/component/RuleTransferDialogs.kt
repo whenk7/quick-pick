@@ -1,5 +1,6 @@
 package com.quickpick.ui.component
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -48,6 +49,9 @@ fun ImportRulesDialog(
     // 解析预览：null=未解析/解析失败，非 null=可导入列表
     var parsed by remember(show) { mutableStateOf<List<MatchRule>?>(null) }
     var parseFailed by remember(show) { mutableStateOf(false) }
+
+    // v1.1.7 §2：OverlayDialog 不消费返回键，自己拦——返回 = 关弹窗
+    BackHandler(enabled = show) { onDismiss() }
 
     OverlayDialog(
         show = show,
@@ -150,6 +154,9 @@ fun ExportRulesDialog(
     onSaveFile: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    // v1.1.7 §2：返回 = 关弹窗
+    BackHandler(enabled = show) { onDismiss() }
+
     OverlayDialog(
         show = show,
         title = "导出规则",
