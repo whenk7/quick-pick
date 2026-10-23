@@ -15,3 +15,10 @@ fun applyAddressAlias(address: String?, aliases: List<AddressAlias>): String? {
     val hit = aliases.firstOrNull { it.match.isNotBlank() && address.contains(it.match) }
     return hit?.alias ?: address
 }
+
+/**
+ * 新增/覆盖：同 match 的旧条目被新条目替换（终审修复——重复 match 会撞 LazyColumn key，
+ * 且首命中原则下后到的同 match 条目本是死条）。新条目放尾部。
+ */
+fun upsertAddressAlias(list: List<AddressAlias>, item: AddressAlias): List<AddressAlias> =
+    list.filter { it.match != item.match } + item

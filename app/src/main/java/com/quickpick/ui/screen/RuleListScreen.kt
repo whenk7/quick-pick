@@ -319,7 +319,7 @@ private data class WorkshopAction(
 
 /**
  * 规则卡片：点击进编辑，**长按分享**（原 ↗ 直触分享改为长按，图标位让给 `</>` JSON 预览，
- * 避免卡片挤三个 48dp 按钮），`</>` 弹 JSON 预览，🗑 弹删除确认。
+ * 避免卡片挤三个 48dp 按钮），`</>` 弹 JSON 预览，🗑 直接删除+Snackbar 轻提示（v1.1.5 起不弹确认）。
  */
 @Composable
 private fun RuleCard(

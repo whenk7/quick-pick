@@ -173,6 +173,8 @@ fun LiquidGlassNavigationBar(
     // 按下起 longPressTimeout 计时；移动（onDrag）或抬起（onDragStopped/Cancelled）取消
     val longPressTimeout = androidx.compose.ui.platform.LocalViewConfiguration.current.longPressTimeoutMillis
     var longPressJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    // remembered DampedDragAnimation 的 key 不含本回调——rememberUpdatedState 防捕获旧 lambda
+    val onTabLongClickUpdated by rememberUpdatedState(onTabLongClick)
 
     val dampedDrag = remember(animationScope, tabsCount, density, isLtr) {
         DampedDragAnimation(
@@ -190,7 +192,7 @@ fun LiquidGlassNavigationBar(
                 longPressJob?.cancel()
                 longPressJob = animationScope.launch {
                     kotlinx.coroutines.delay(longPressTimeout)
-                    onTabLongClick?.invoke(items[indexAt(position.x)])
+                    onTabLongClickUpdated?.invoke(items[indexAt(position.x)])
                 }
             },
             onDragStopped = {

@@ -20,7 +20,12 @@ class AddressAliasViewModel(application: Application) : AndroidViewModel(applica
 
     fun add(match: String, alias: String) {
         viewModelScope.launch {
-            settingsStore.setAddressAliases(aliases.value + AddressAlias(match.trim(), alias.trim()))
+            // 同 match 覆盖（防重复 match 撞 LazyColumn key 崩溃循环，终审 Important #1）
+            settingsStore.setAddressAliases(
+                com.quickpick.domain.model.upsertAddressAlias(
+                    aliases.value, AddressAlias(match.trim(), alias.trim())
+                )
+            )
         }
     }
 

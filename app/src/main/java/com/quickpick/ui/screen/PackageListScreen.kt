@@ -1,8 +1,6 @@
 package com.quickpick.ui.screen
 
 import android.Manifest
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri

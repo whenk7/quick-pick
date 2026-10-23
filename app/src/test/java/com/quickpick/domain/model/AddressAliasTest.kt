@@ -49,4 +49,22 @@ class AddressAliasTest {
         )
         assertEquals("西南门", applyAddressAlias("绿洲家园西南门袋鼠柜", ordered))
     }
+
+    // ---- upsert（终审 Important #1：重复 match → LazyColumn key 冲突崩溃循环）----
+
+    @Test
+    fun `upsert same match replaces old entry`() {
+        val list = listOf(AddressAlias("绿洲家园", "家门口"), AddressAlias("科创中心", "公司"))
+        val result = upsertAddressAlias(list, AddressAlias("绿洲家园", "家"))
+        assertEquals(2, result.size, "同 match 覆盖不新增")
+        assertEquals("家", result.first { it.match == "绿洲家园" }.alias, "旧别名被新值替换")
+        assertEquals("科创中心", result[0].match, "其余条目顺序不动")
+        assertEquals("家", applyAddressAlias("绿洲家园3号柜", result), "覆盖后命中新值")
+    }
+
+    @Test
+    fun `upsert new match appends`() {
+        val result = upsertAddressAlias(emptyList(), AddressAlias("a", "b"))
+        assertEquals(listOf(AddressAlias("a", "b")), result)
+    }
 }

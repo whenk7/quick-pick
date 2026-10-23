@@ -49,6 +49,8 @@ fun PackageCard(
                 .fillMaxWidth()
                 .shadow(1.dp, RoundedCornerShape(12.dp))
                 .combinedClickable(
+                    indication = null,
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                     onClick = {},
                     onLongClick = { showSmsDetail = true }
                 ),
@@ -119,7 +121,10 @@ fun PackageCard(
             .fillMaxWidth()
             .shadow(2.dp, RoundedCornerShape(16.dp))
             .combinedClickable(
-                onClick = {},                              // 单击无功能（用户裁决）
+                // 单击无动画无交互（用户裁决）：indication=null 去涟漪
+                indication = null,
+                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                onClick = {},
                 onLongClick = { showSmsDetail = true }     // 长按 = 短信原文
             ),
         cornerRadius = 16.dp,
@@ -153,11 +158,11 @@ fun PackageCard(
                     color = TextTertiary
                 )
                 Spacer(modifier = Modifier.weight(1f))
-                // 圆圈：48dp 点击区；未取=主色描边空心圆，点按标已取
+                // 圆圈：48dp 点击区（spec §4.1）；未取=主色描边空心圆，点按标已取
                 IconButton(
                     onClick = onTogglePickedUp,
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(48.dp)
                         .semantics(mergeDescendants = true) { contentDescription = "标记已取件" }
                 ) {
                     Box(

@@ -29,6 +29,9 @@ fun CoalescingSnackbarHost(modifier: Modifier = Modifier) {
     LaunchedEffect(Unit) {
         UiNotifier.messages.collect { toast ->
             current = toast.copy(nonce = System.nanoTime())
+            // 消费即清重放缓存：防止宿主重建时旧消息重复弹出
+            @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+            UiNotifier.messages.resetReplayCache()
         }
     }
     // 5 秒自动消失；nonce 变化（含同文案重发）重启计时
