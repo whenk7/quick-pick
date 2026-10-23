@@ -33,7 +33,8 @@ private val SCAN_WINDOW_LABELS = listOf(7 to "一周", 30 to "一月", 90 to "�
 @Composable
 fun SettingsScreen(
     settingsViewModel: SettingsViewModel,
-    onOpenTheme: () -> Unit
+    onOpenTheme: () -> Unit,
+    onOpenAliases: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scanWindowDays by settingsViewModel.scanWindowDays.collectAsStateWithLifecycle()
@@ -70,7 +71,7 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 主题与外观：独立页面（模式/引擎/种子色/风格/规格 + 玻璃底栏调参）
+        // 主题与外观：独立页面（模式/种子色/风格/规格 + 玻璃底栏调参）
         SectionTitle("外观")
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -78,8 +79,13 @@ fun SettingsScreen(
         ) {
             ArrowPreference(
                 title = "主题与外观",
-                summary = "主题模式、配色引擎、玻璃底栏",
+                summary = "主题模式、配色、玻璃底栏",
                 onClick = onOpenTheme
+            )
+            ArrowPreference(
+                title = "地址别名",
+                summary = "长地址换成好记的名字",
+                onClick = onOpenAliases
             )
         }
 

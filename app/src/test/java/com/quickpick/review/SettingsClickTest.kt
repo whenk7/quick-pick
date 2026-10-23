@@ -37,7 +37,7 @@ class SettingsClickTest {
     @Test
     fun `scan window spinner opens on click`() {
         composeRule.setContent {
-            QuickPickTheme { SettingsScreen(settingsVm()) {} }
+            QuickPickTheme { SettingsScreen(settingsVm(), onOpenTheme = {}) }
         }
         composeRule.onNodeWithText("扫描范围").performClick()
         composeRule.waitForIdle()
@@ -54,7 +54,7 @@ class SettingsClickTest {
     fun `theme page opens and composes`() {
         // 主题页组合本身（navigation 的 crash 等价物：直接组合页面）
         composeRule.setContent {
-            QuickPickTheme { ThemeSettingsScreen(settingsVm(), {}) }
+            QuickPickTheme { ThemeSettingsScreen(settingsVm(), onBack = {}) }
         }
         composeRule.onNodeWithText("主题模式").assertIsDisplayed()
     }

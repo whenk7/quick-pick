@@ -40,7 +40,11 @@ class PackageListViewModel(
     private val ruleRepo = RuleRepository(db.matchRuleDao())
     private val smsRepo = SmsRepository(db.scannedSmsDao())
 
+    // v1.1.7 §6：显示层应用地址别名（不动库存数据；改别名即时生效无需重扫）
     val packages: StateFlow<List<PackageRecord>> = packageRepo.observeAll()
+        .combine(settingsStore.addressAliases) { list, aliases ->
+            list.map { it.copy(address = com.quickpick.domain.model.applyAddressAlias(it.address, aliases)) }
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val unpickedCount: StateFlow<Int> = packageRepo.observeUnpickedCount()

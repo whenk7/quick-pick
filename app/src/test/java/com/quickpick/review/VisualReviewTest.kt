@@ -188,6 +188,20 @@ class VisualReviewTest {
             }
         }
 
+    /** 地址簿页（v1.1.7 §6） */
+    @Test
+    fun `address alias page`() =
+        captureRoboImage("build/outputs/review/page_address_alias.png") {
+            MiuixTheme(controller = fixed(ColorSchemeMode.Light), textStyles = AppTypography) {
+                com.quickpick.ui.screen.AddressAliasScreen(
+                    viewModel = com.quickpick.ui.viewmodel.AddressAliasViewModel(
+                        ApplicationProvider.getApplicationContext()
+                    ),
+                    onBack = {}
+                )
+            }
+        }
+
     /** 规则页（带新的三按钮行） */
     @Test
     fun `rules page with workshop buttons`() =

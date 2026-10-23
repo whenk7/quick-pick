@@ -43,6 +43,7 @@ sealed class Screen(val route: String) {
     }
     data object AiPrompt : Screen("ai_prompt")
     data object ThemeSettings : Screen("theme_settings")
+    data object AddressAlias : Screen("address_alias")
 }
 
 @Composable
@@ -86,6 +87,9 @@ fun AppNavigation() {
                     },
                     onNavigateToTheme = {
                         navController.navigate(Screen.ThemeSettings.route)
+                    },
+                    onNavigateToAliases = {
+                        navController.navigate(Screen.AddressAlias.route)
                     }
                 )
             }
@@ -132,6 +136,14 @@ fun AppNavigation() {
                     onBack = { navController.popBackStack() }
                 )
             }
+
+            composable(Screen.AddressAlias.route) {
+                val viewModel: com.quickpick.ui.viewmodel.AddressAliasViewModel = viewModel()
+                AddressAliasScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() }
+                )
+            }
         }
     }
 }
@@ -140,7 +152,8 @@ fun AppNavigation() {
 fun MainScreen(
     onNavigateToEditor: (Long) -> Unit,
     onNavigateToAi: () -> Unit,
-    onNavigateToTheme: () -> Unit
+    onNavigateToTheme: () -> Unit,
+    onNavigateToAliases: () -> Unit = {}
 ) {
     // 构造函数含 SettingsStore，默认 Factory 反射注入不了，走自建 Factory
     val packageViewModel: PackageListViewModel = viewModel(factory = PackageListViewModel.Factory)
@@ -230,7 +243,8 @@ fun MainScreen(
                 BottomTab.SETTINGS -> {
                     SettingsScreen(
                         settingsViewModel = settingsViewModel,
-                        onOpenTheme = onNavigateToTheme
+                        onOpenTheme = onNavigateToTheme,
+                        onOpenAliases = onNavigateToAliases
                     )
                 }
             }

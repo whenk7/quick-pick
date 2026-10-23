@@ -38,6 +38,11 @@ class SettingsStore(private val context: Context) : PresetFlags {
         private val KEY_GLASS_LENS = floatPreferencesKey("glass_lens")
         private val KEY_GLASS_HIGHLIGHT = floatPreferencesKey("glass_highlight")
         private val KEY_GLASS_ALPHA = floatPreferencesKey("glass_alpha")
+
+        // 全局地址簿（v1.1.7 §6）：JSON 列表 [{match, alias}]，显示层替换不动库存数据
+        private val KEY_ADDRESS_ALIASES = stringPreferencesKey("address_aliases")
+        // 沉浸式取件模式首次引导（v1.1.7 §11）
+        private val KEY_IMMERSION_GUIDE_SHOWN = booleanPreferencesKey("immersion_guide_shown")
     }
 
     val onboardingDone: Flow<Boolean> =
@@ -164,5 +169,35 @@ class SettingsStore(private val context: Context) : PresetFlags {
 
     suspend fun setGlassAlpha(v: Float) {
         context.dataStore.edit { it[KEY_GLASS_ALPHA] = v }
+    }
+
+    // ============ 全局地址簿（v1.1.7 §6） ============
+
+    private val aliasListType = object : com.google.gson.reflect.TypeToken<List<com.quickpick.domain.model.AddressAlias>>() {}.type
+    private val gson = com.google.gson.Gson()
+
+    val addressAliases: Flow<List<com.quickpick.domain.model.AddressAlias>> =
+        context.dataStore.data.map { prefs ->
+            val json = prefs[KEY_ADDRESS_ALIASES] ?: return@map emptyList()
+            runCatching {
+                gson.fromJson<List<com.quickpick.domain.model.AddressAlias?>>(json, aliasListType)
+                    .mapNotNull { it }
+                    .filter { it.match.isNotBlank() }
+            }.getOrDefault(emptyList())
+        }
+
+    /** 写入前过滤空白 match（contains("") 恒 true 的坑，见 Review Focus #5） */
+    suspend fun setAddressAliases(list: List<com.quickpick.domain.model.AddressAlias>) {
+        val cleaned = list.filter { it.match.isNotBlank() && it.alias.isNotBlank() }
+        context.dataStore.edit { it[KEY_ADDRESS_ALIASES] = gson.toJson(cleaned) }
+    }
+
+    // ============ 沉浸模式引导（v1.1.7 §11） ============
+
+    val immersionGuideShown: Flow<Boolean> =
+        context.dataStore.data.map { it[KEY_IMMERSION_GUIDE_SHOWN] ?: false }
+
+    suspend fun setImmersionGuideShown() {
+        context.dataStore.edit { it[KEY_IMMERSION_GUIDE_SHOWN] = true }
     }
 }
