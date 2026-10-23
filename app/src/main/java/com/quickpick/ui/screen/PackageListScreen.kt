@@ -96,12 +96,13 @@ fun PackageListScreen(
     // 外层 MainScreen 的 Scaffold 已吃 systemBars inset，内层必须置零，否则上下双份留白
     Scaffold(contentWindowInsets = WindowInsets(0), containerColor = Background) { padding ->
         Column(modifier = Modifier.padding(padding)) {
-            // 标题栏
+            // 标题栏（v1.1.7 §8：副标题 = 待取件数 · 扫描时间范围）
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
                 Text("取件宝", style = MiuixTheme.textStyles.title2, color = TextPrimary)
                 if (hasPermission && packages.isNotEmpty()) {
+                    val scanDays by viewModel.scanWindowDays.collectAsStateWithLifecycle()
                     Text(
-                        text = "$unpickedCount 件待取",
+                        text = "$unpickedCount 件待取 · 近${com.quickpick.ui.component.scanWindowLabel(scanDays)}",
                         style = MiuixTheme.textStyles.body2,
                         color = TextSecondary
                     )

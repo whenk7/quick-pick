@@ -1,15 +1,22 @@
 package com.quickpick.ui.component
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -17,13 +24,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.quickpick.domain.model.MatchRule
 import com.quickpick.ui.theme.InputFieldColors
+import com.quickpick.ui.theme.Primary
+import com.quickpick.ui.theme.PrimarySoft
 import com.quickpick.ui.theme.TextSecondary
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
@@ -42,7 +54,6 @@ fun ImportRulesDialog(
     onPickFile: () -> Unit,
     onParse: (String) -> List<MatchRule>?,
     onConfirmImport: (List<MatchRule>) -> Unit,
-    onPasteClipboard: () -> String?,
     onDismiss: () -> Unit
 ) {
     val fieldState = rememberTextFieldState()
@@ -65,28 +76,41 @@ fun ImportRulesDialog(
                 .heightIn(max = 480.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            TextField(
-                state = fieldState,
-                modifier = Modifier.fillMaxWidth(),
-                label = "粘贴规则 JSON",
-                lineLimits = TextFieldLineLimits.MultiLine(minHeightInLines = 3, maxHeightInLines = 6),
-                colors = InputFieldColors
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Row {
-                TextButton(
-                    text = "📋 粘贴",
-                    onClick = {
-                        onPasteClipboard()?.let { fieldState.edit { replace(0, length, it) } }
-                    },
-                    colors = ButtonDefaults.textButtonColorsPrimary()
+            // v1.1.7 §10：输入框 + 右侧「本地文件」窄列按钮（新式文件图标+竖排文字，与输入框同高）；
+            // 移除旧「粘贴/选文件」按钮——粘贴走输入框系统长按
+            Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+                TextField(
+                    state = fieldState,
+                    modifier = Modifier.weight(1f),
+                    label = "粘贴规则 JSON",
+                    lineLimits = TextFieldLineLimits.MultiLine(minHeightInLines = 3, maxHeightInLines = 6),
+                    colors = InputFieldColors
                 )
-                Spacer(modifier = Modifier.width(12.dp))
-                TextButton(
-                    text = "📁 选文件",
-                    onClick = onPickFile,
-                    colors = ButtonDefaults.textButtonColorsPrimary()
-                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column(
+                    modifier = Modifier
+                        .width(56.dp)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(PrimarySoft)
+                        .clickable(onClick = onPickFile)
+                        .padding(vertical = 10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = QpIcons.FileDoc,
+                        contentDescription = null,
+                        tint = Primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "本\n地\n文\n件",
+                        style = MiuixTheme.textStyles.body2,
+                        color = Primary
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(8.dp))
 

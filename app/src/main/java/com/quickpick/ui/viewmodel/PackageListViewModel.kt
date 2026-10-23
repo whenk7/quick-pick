@@ -54,6 +54,10 @@ class PackageListViewModel(
         .map { it.size }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
+    /** 扫描窗口天数（首页副标题「· 近三月」用，v1.1.7 §8） */
+    val scanWindowDays: StateFlow<Int> = settingsStore.scanWindowDays
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 7)
+
     private val _scannedCount = MutableStateFlow(0)
     val scannedCount: StateFlow<Int> = _scannedCount
 

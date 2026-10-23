@@ -24,12 +24,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quickpick.domain.model.MatchRule
+import androidx.compose.foundation.clickable
 import com.quickpick.ui.component.ConfirmDialog
 import com.quickpick.ui.component.EmptyState
 import com.quickpick.ui.component.ExportRulesDialog
 import com.quickpick.ui.component.ImportRulesDialog
 import com.quickpick.ui.component.InlineTextButton
 import com.quickpick.ui.component.JsonPreviewDialog
+import com.quickpick.ui.component.QpIcons
 import com.quickpick.ui.component.glass.glassNavBarClearance
 import com.quickpick.ui.theme.*
 import com.quickpick.ui.viewmodel.RuleListViewModel
@@ -38,6 +40,7 @@ import com.quickpick.util.UiNotifier
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
@@ -138,7 +141,7 @@ fun RuleListScreen(
                         color = TextSecondary,
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
-                    // 导入 / AI 生成 / 导出（横排紧凑三按钮）
+                    // 新建 / AI 生成 / 导入 / 导出（v1.1.7 §9：图标+文字四按钮，底部新增挪入此处）
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -146,17 +149,30 @@ fun RuleListScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         listOf(
-                            Triple("导入", Primary, { showImport = true }),
-                            Triple("AI 生成", Primary, { onOpenAi() }),
-                            Triple("导出", Primary, { showExport = true })
-                        ).forEach { (label, _, action) ->
-                            InlineTextButton(
-                                text = label,
-                                onClick = action,
+                            WorkshopAction("新建", QpIcons.Plus, "新建规则") { onAddRule() },
+                            WorkshopAction("AI 生成", QpIcons.Sparkle, "AI 生成规则") { onOpenAi() },
+                            WorkshopAction("导入", QpIcons.Download, "导入规则") { showImport = true },
+                            WorkshopAction("导出", QpIcons.Upload, "导出规则") { showExport = true }
+                        ).forEach { (label, icon, desc, action) ->
+                            Column(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .border(1.dp, Primary, RoundedCornerShape(12.dp))
-                            )
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .border(1.dp, Primary.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                                    .clickable(onClick = action)
+                                    .padding(vertical = 10.dp)
+                                    .semantics(mergeDescendants = true) { contentDescription = desc },
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    tint = Primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(label, style = MiuixTheme.textStyles.body2, color = Primary)
+                            }
                         }
                     }
                 }
@@ -231,20 +247,8 @@ fun RuleListScreen(
                 }
             }
 
-            // 新增按钮（miuix 无 OutlinedButton：透明 TextButton + 主色描边替代）
-            item {
-                Column {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    InlineTextButton(
-                        text = "+ 新增匹配规则",
-                        onClick = onAddRule,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .border(1.dp, Primary, RoundedCornerShape(16.dp))
-                    )
-                    Spacer(modifier = Modifier.height(80.dp))
-                }
-            }
+            // v1.1.7 §9：新增挪到顶部四按钮，底部不再重复
+            item { Spacer(modifier = Modifier.height(80.dp)) }
         }
     }
 
@@ -266,10 +270,6 @@ fun RuleListScreen(
         onConfirmImport = { list ->
             viewModel.importRules(list)
             showImport = false
-        },
-        onPasteClipboard = {
-            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.text?.toString()
         },
         onDismiss = { showImport = false }
     )
@@ -308,6 +308,14 @@ fun RuleListScreen(
         onDismiss = { viewModel.resolveConflict(false) }
     )
 }
+
+/** 工坊按钮（v1.1.7 §9）：图标+文字四等分横排 */
+private data class WorkshopAction(
+    val label: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val desc: String,
+    val onClick: () -> Unit
+)
 
 /**
  * 规则卡片：点击进编辑，**长按分享**（原 ↗ 直触分享改为长按，图标位让给 `</>` JSON 预览，

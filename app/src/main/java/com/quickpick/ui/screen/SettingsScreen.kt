@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quickpick.BuildConfig
+import com.quickpick.ui.component.SCAN_WINDOW_LABELS
 import com.quickpick.ui.component.glass.glassNavBarClearance
 import com.quickpick.ui.theme.*
 import com.quickpick.ui.viewmodel.SettingsViewModel
@@ -27,8 +28,7 @@ import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.WindowSpinnerPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-/** 扫描窗口档位（天 → 显示名） */
-private val SCAN_WINDOW_LABELS = listOf(7 to "一周", 30 to "一月", 90 to "三月", 180 to "半年")
+/** 扫描窗口档位定义挪至 ui/component/ScanWindows.kt（首页副标题共用，v1.1.7 §8） */
 
 @Composable
 fun SettingsScreen(

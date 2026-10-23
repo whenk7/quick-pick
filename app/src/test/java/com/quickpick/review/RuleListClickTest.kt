@@ -92,15 +92,17 @@ class RuleListClickTest {
                     com.quickpick.ui.component.ImportRulesDialog(
                         show = true,
                         onPickFile = {}, onParse = { null }, onConfirmImport = {},
-                        onPasteClipboard = { null }, onDismiss = {}
+                        onDismiss = {}
                     )
                 }
             }
         }
         composeRule.waitForIdle()
-        composeRule.onRoot().captureRoboImage("build/outputs/review/dialog_import.png")
         composeRule.onAllNodesWithText("导入规则", substring = true, useUnmergedTree = true)
             .fetchSemanticsNodes().isNotEmpty().let { assert(it) { "导入弹窗未渲染" } }
+        // v1.1.7 §10：竖排「本地文件」按钮存在（多行 Text 的换行符在语义树里保留）
+        composeRule.onAllNodesWithText("本\n地\n文\n件", useUnmergedTree = true)
+            .fetchSemanticsNodes().isNotEmpty().let { assert(it) { "竖排本地文件按钮未渲染" } }
     }
 
     @Test
