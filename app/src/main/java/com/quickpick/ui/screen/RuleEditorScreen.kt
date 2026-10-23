@@ -129,7 +129,7 @@ fun RuleEditorScreen(
                         TextField(
                             value = state.smsText,
                             onValueChange = { viewModel.updateSmsText(it) },
-                            label = "从短信 App 复制一条快递短信，粘贴到这里...",
+                            label = "从短信 App 复制一条快递短信，粘贴到这里，下方实时预览提取效果...",
                             useLabelAsPlaceholder = true,
                             modifier = Modifier.fillMaxWidth(),
                             minLines = 3,
