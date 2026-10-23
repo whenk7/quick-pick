@@ -18,12 +18,15 @@ class PresetRulesTest {
         var seeded = false
         var v2 = false
         var v3 = false
+        var v4 = false
         override suspend fun isRulesSeeded() = seeded
         override suspend fun setRulesSeeded() { seeded = true }
         override suspend fun isPresetV2Seeded() = v2
         override suspend fun setPresetV2Seeded() { v2 = true }
         override suspend fun isPresetV3Seeded() = v3
         override suspend fun setPresetV3Seeded() { v3 = true }
+        override suspend fun isPresetV4Seeded() = v4
+        override suspend fun setPresetV4Seeded() { v4 = true }
     }
 
     private class FakeDao : MatchRuleDao {
@@ -58,7 +61,7 @@ class PresetRulesTest {
         assertNull(sf.phonePrefix)
         assertNull(sf.trackingPrefix)
         assertEquals("【", sf.brandPrefix)
-        assertEquals("1069", sf.senderPattern)
+        assertNull(sf.senderPattern, "发件方过滤已移除（端口常变不可靠）")
     }
 
     @Test

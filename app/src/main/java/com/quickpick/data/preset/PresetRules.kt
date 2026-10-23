@@ -11,13 +11,15 @@ interface PresetFlags {
     suspend fun setPresetV2Seeded()
     suspend fun isPresetV3Seeded(): Boolean
     suspend fun setPresetV3Seeded()
+    suspend fun isPresetV4Seeded(): Boolean
+    suspend fun setPresetV4Seeded()
 }
 
 object PresetRules {
 
     /**
      * 预置规则（v3 极简形，2026-10-23 裁决）：只留取件码 + 品牌签名。
-     * 不带代取点/电话/单号锚点——公共包不配具体地点；senderPattern=1069 防政务端口误报。
+     * 不带代取点/电话/单号/发件方锚点——公共包不配具体地点；发件方端口常变不可靠（v1.1.5 移除）。
      */
     val all: List<MatchRuleEntity> = listOf(
         MatchRuleEntity(
@@ -25,7 +27,6 @@ object PresetRules {
             isPreset = true,
             codePrefix = "取件码：",
             codeSuffix = "，",
-            senderPattern = "1069",
             brandPrefix = "【",
             brandSuffix = "】",
             sampleSms = "【顺丰速运】您的包裹已到达驿站，取件码：3-2-1088，请尽快取件。"
@@ -35,7 +36,6 @@ object PresetRules {
             isPreset = true,
             codePrefix = "取货码",
             codeSuffix = "，",
-            senderPattern = "1069",
             brandPrefix = "【",
             brandSuffix = "】",
             sampleSms = "【京东物流】您的订单已送达，取货码8-3-1024，请尽快取件。"
@@ -102,5 +102,19 @@ object PresetRules {
                 }
         }
         store.setPresetV3Seeded()
+    }
+
+    /**
+     * v1.1.5：发件方过滤从预置移除（端口常变不可靠，用户裁决）。
+     * 只清 senderPattern，其余字段不动。
+     */
+    suspend fun upgradeToV4IfNeeded(store: PresetFlags, dao: MatchRuleDao) {
+        if (store.isPresetV4Seeded()) return
+        all.forEach { preset ->
+            dao.getByName(preset.name)
+                .filter { it.isPreset }
+                .forEach { old -> dao.update(old.copy(senderPattern = null)) }
+        }
+        store.setPresetV4Seeded()
     }
 }

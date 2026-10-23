@@ -22,6 +22,7 @@ class SettingsStore(private val context: Context) : PresetFlags {
         private val KEY_RULES_SEEDED = booleanPreferencesKey("rules_seeded")
         private val KEY_PRESET_V2_SEEDED = booleanPreferencesKey("preset_v2_seeded")
         private val KEY_PRESET_V3_SEEDED = booleanPreferencesKey("preset_v3_seeded")
+        private val KEY_PRESET_V4_SEEDED = booleanPreferencesKey("preset_v4_seeded")
         private val KEY_SCAN_WINDOW_DAYS = intPreferencesKey("scan_window_days")
 
         // 主题（2026-10-22 重做；老键 color_mode/use_monet 弃用不迁移）
@@ -67,6 +68,13 @@ class SettingsStore(private val context: Context) : PresetFlags {
 
     override suspend fun setPresetV3Seeded() {
         context.dataStore.edit { it[KEY_PRESET_V3_SEEDED] = true }
+    }
+
+    override suspend fun isPresetV4Seeded(): Boolean =
+        context.dataStore.data.map { it[KEY_PRESET_V4_SEEDED] ?: false }.first()
+
+    override suspend fun setPresetV4Seeded() {
+        context.dataStore.edit { it[KEY_PRESET_V4_SEEDED] = true }
     }
 
     /** 扫描时间窗口（天） */

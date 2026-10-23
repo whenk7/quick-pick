@@ -27,6 +27,8 @@ class QuickPickApp : Application() {
                 PresetRules.upgradeIfNeeded(settingsStore, database.matchRuleDao())
                 // v1.1.4：预置极简重置（去代取点锚点，只留取件码+品牌）
                 PresetRules.upgradeToV3IfNeeded(settingsStore, database.matchRuleDao())
+                // v1.1.5：发件方过滤从预置移除（端口常变不可靠）
+                PresetRules.upgradeToV4IfNeeded(settingsStore, database.matchRuleDao())
             }.onFailure { Log.w("QuickPickApp", "预置规则没能灌入/升级", it) }
         }
     }

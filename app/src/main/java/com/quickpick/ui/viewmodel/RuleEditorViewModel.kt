@@ -5,7 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.quickpick.QuickPickApp
 import com.quickpick.data.repository.RuleRepository
-import com.quickpick.data.repository.SmsRepository
+import com.quickpick.util.UiNotifier
 import com.quickpick.domain.engine.MatchEngine
 import com.quickpick.domain.model.ExtractedFields
 import com.quickpick.domain.model.MatchRule
@@ -43,7 +43,6 @@ class RuleEditorViewModel(application: Application) : AndroidViewModel(applicati
 
     private val db = (application as QuickPickApp).database
     private val repo = RuleRepository(db.matchRuleDao())
-    private val smsRepo = SmsRepository(db.scannedSmsDao())
 
     private val _state = MutableStateFlow(EditorState())
     val state: StateFlow<EditorState> = _state
@@ -229,13 +228,12 @@ class RuleEditorViewModel(application: Application) : AndroidViewModel(applicati
             } else {
                 repo.insert(rule)
             }
+            // 轻提示引导下拉重扫（不弹窗打断，v1.1.5 用户裁决）
+            UiNotifier.notify(
+                if (wasEdit) "规则已更新，回快递页下拉重扫生效" else "已保存，回快递页下拉扫描历史短信"
+            )
             _savedEvents.emit(wasEdit)
         }
-    }
-
-    /** 规则更新后：清除「未匹配短信」的已扫标记，回到列表页时自动重扫它们 */
-    fun rescanUnmatched() {
-        viewModelScope.launch { smsRepo.deleteUnmatched() }
     }
 
     private fun refreshPreview() {

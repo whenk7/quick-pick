@@ -34,6 +34,7 @@ import com.quickpick.ui.component.glass.glassNavBarClearance
 import com.quickpick.ui.theme.*
 import com.quickpick.ui.viewmodel.RuleListViewModel
 import com.quickpick.util.JsonExporter
+import com.quickpick.util.UiNotifier
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -57,8 +58,11 @@ fun RuleListScreen(
     val conflict by viewModel.conflict.collectAsStateWithLifecycle()
     val presets = rules.filter { it.isPreset }
     val customs = rules.filter { !it.isPreset }
-    // 删除目标：非 null 时展示确认弹窗
-    var deleteTarget by remember { mutableStateOf<MatchRule?>(null) }
+    // 删除规则：直接删 + 轻提示（v1.1.5 用户裁决：不再二次确认弹窗）
+    val onDeleteRule: (MatchRule) -> Unit = { rule ->
+        viewModel.deleteRule(rule)
+        UiNotifier.notify("已删除「${rule.name}」，回快递页下拉清理失效记录")
+    }
     // JSON 预览目标：非 null 时展示 JsonPreviewDialog（分享改为长按卡片，见 RuleCard）
     var jsonRule by remember { mutableStateOf<MatchRule?>(null) }
     // 导入/导出弹窗显隐
@@ -175,7 +179,7 @@ fun RuleListScreen(
                         onClick = { onEditRule(rule.id) },
                         onShowJson = { jsonRule = rule },
                         onShare = { onExportRule(rule) },
-                        onDelete = { deleteTarget = rule }
+                        onDelete = { onDeleteRule(rule) }
                     )
                 }
             }
@@ -200,7 +204,7 @@ fun RuleListScreen(
                         onClick = { onEditRule(rule.id) },
                         onShowJson = { jsonRule = rule },
                         onShare = { onExportRule(rule) },
-                        onDelete = { deleteTarget = rule }
+                        onDelete = { onDeleteRule(rule) }
                     )
                 }
             }
@@ -243,24 +247,6 @@ fun RuleListScreen(
             }
         }
     }
-
-    // 删除规则：二次确认（预置也可删，文案遵循设计系统温和规范）
-    // 常驻组合 + visible 参数：退出动画由 OverlayDialog 的 show 状态驱动，条件组合会跳过它。
-    // 记住最近的非 null 目标：deleteTarget 置 null 后的退场动画期间标题不闪空
-    var lastDeleteTarget by remember { mutableStateOf<MatchRule?>(null) }
-    deleteTarget?.let { lastDeleteTarget = it }
-    ConfirmDialog(
-        visible = deleteTarget != null,
-        title = "删除「${lastDeleteTarget?.name.orEmpty()}」？",
-        message = "删除后将无法恢复，确定要删除吗？",
-        confirmText = "删除",
-        dangerConfirm = true,
-        onConfirm = {
-            lastDeleteTarget?.let { viewModel.deleteRule(it) }
-            deleteTarget = null
-        },
-        onDismiss = { deleteTarget = null }
-    )
 
     // JSON 预览弹窗：常驻组合 + show 参数（退出动画同 ConfirmDialog 注释）。
     // 记住最近的非 null 规则：jsonRule 置 null 后的退场动画期间内容不闪空

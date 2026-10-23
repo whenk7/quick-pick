@@ -39,4 +39,8 @@ interface PackageRecordDao {
 
     @Query("UPDATE package_records SET is_picked_up = 1 WHERE date(sms_timestamp / 1000, 'unixepoch', 'localtime') = date(:dateMs / 1000, 'unixepoch', 'localtime')")
     suspend fun markDayPickedUp(dateMs: Long)
+
+    /** 全量重扫时移除失效记录：当前规则不再匹配的未取件记录（已取件的是历史，保留置灰） */
+    @Query("DELETE FROM package_records WHERE sms_id = :smsId AND is_picked_up = 0")
+    suspend fun deleteUnpickedBySmsId(smsId: String): Int
 }

@@ -77,7 +77,12 @@ class PackageListViewModel(
         if (granted) scanSms()
     }
 
-    fun scanSms() {
+    /**
+     * @param removeUnmatched 全量重扫语义（v1.1.5 用户裁决）：短信当前规则匹配不上时，
+     *   移除其对应的未取件失效记录。仅手动下拉（clearScanned 全量重扫）传 true；
+     *   增量扫描（新短信到达/权限恢复）不动存量记录。
+     */
+    fun scanSms(removeUnmatched: Boolean = false) {
         if (_isScanning.value) return
         viewModelScope.launch {
             _isScanning.value = true
@@ -118,6 +123,9 @@ class PackageListViewModel(
                             )
                         )
                     }
+                    if (result == null && removeUnmatched) {
+                        packageRepo.deleteUnpickedBySmsId(sms.id)
+                    }
                     smsRepo.markScanned(sms.id)
                 }
                 _scannedCount.value = smsRepo.scannedCount()
@@ -140,7 +148,7 @@ class PackageListViewModel(
             // 下次扫描会把在途那轮已处理的短信再处理一遍
             if (_isScanning.value) return@launch
             smsRepo.clearScanned()
-            scanSms()
+            scanSms(removeUnmatched = true)
         }
     }
 

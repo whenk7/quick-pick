@@ -14,7 +14,6 @@ class SmsRepository(private val dao: ScannedSmsDao) {
     suspend fun scannedCount(): Int = dao.count()
 
     /** 清除「未匹配短信」的已扫标记，下次扫描自动重试（规则更新后用） */
-    suspend fun deleteUnmatched() = dao.deleteUnmatched()
 
     /** 全量重扫前清空 */
     suspend fun clearScanned() = dao.clearAll()

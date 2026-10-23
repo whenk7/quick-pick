@@ -1,6 +1,5 @@
 package com.quickpick.ui.component
 
-import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -20,6 +19,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -44,6 +45,68 @@ fun PackageCard(
     val brandColor = BrandColors.forName(record.companyName)
     // 已取件：内容整体 50% 透明（置灰保留，不删除）
     val contentAlpha = if (record.isPickedUp) 0.5f else 1f
+
+    // 已取件且未展开：紧凑单行卡（存在感最低）。点击展开详情；圆圈可取消已取
+    if (record.isPickedUp && !expanded) {
+        Card(
+            modifier = modifier
+                .fillMaxWidth()
+                .shadow(1.dp, RoundedCornerShape(12.dp)),
+            cornerRadius = 12.dp,
+            colors = CardDefaults.defaultColors(color = SurfaceDone),
+            pressFeedbackType = PressFeedbackType.Sink,
+            onClick = { expanded = true }
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(brandColor)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = record.companyName,
+                    style = MiuixTheme.textStyles.body1,
+                    color = TextSecondary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("✓", style = MiuixTheme.textStyles.body2, color = Done)
+                Spacer(modifier = Modifier.weight(1f))
+                record.pickupCode?.let { code ->
+                    Text(
+                        text = code,
+                        style = MiuixTheme.textStyles.body1.copy(
+                            fontFamily = FontFamily.Monospace,
+                            textDecoration = TextDecoration.LineThrough
+                        ),
+                        color = TextTertiary
+                    )
+                }
+                Spacer(modifier = Modifier.width(6.dp))
+                IconButton(
+                    onClick = onTogglePickedUp,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .semantics(mergeDescendants = true) { contentDescription = "取消已取件" }
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(22.dp)
+                            .clip(CircleShape)
+                            .background(Primary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("✓", color = Color.White, style = MiuixTheme.textStyles.body2)
+                    }
+                }
+            }
+        }
+        return
+    }
 
     Card(
         modifier = modifier
@@ -190,18 +253,35 @@ fun PackageCard(
 }
 
 /**
- * 跳到系统短信应用的对应会话。
- * 注意：threadId 是 Telephony 会话 ID 不是手机号，必须走 content 会话 URI——
- * `sms:$threadId` 会被短信应用当成收件人号码。无短信应用时温和兜底，不崩溃。
+ * 跳到系统短信应用的对应会话。三级兜底（v1.1.5：MIUI 等 OEM 短信应用不认会话 URI 会闪退/无反应）：
+ * 1) content 会话 URI（AOSP/Google 信息可用；threadId 是 Telephony 会话 ID 不是手机号）
+ * 2) 拉起默认短信应用首页
+ * 3) 都没有 → 温和 toast，不崩溃
  */
 private fun openSmsThread(context: Context, threadId: Long) {
-    try {
+    fun openConversation(): Boolean = try {
         context.startActivity(
             Intent(Intent.ACTION_VIEW, Uri.parse("content://mms-sms/conversations/$threadId"))
         )
-    } catch (e: ActivityNotFoundException) {
-        Toast.makeText(context, "无法打开短信应用", Toast.LENGTH_SHORT).show()
+        true
+    } catch (_: Exception) {
+        false
     }
+
+    fun openSmsApp(): Boolean = try {
+        val pkg = android.provider.Telephony.Sms.getDefaultSmsPackage(context)
+        val intent = pkg?.let { context.packageManager.getLaunchIntentForPackage(it) }
+        if (intent != null) {
+            context.startActivity(intent)
+            true
+        } else false
+    } catch (_: Exception) {
+        false
+    }
+
+    if (openConversation()) return
+    if (openSmsApp()) return
+    Toast.makeText(context, "没找到能打开短信的应用～", Toast.LENGTH_SHORT).show()
 }
 
 @Composable

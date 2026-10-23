@@ -40,17 +40,14 @@ fun RuleEditorScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var selectedToken by remember { mutableStateOf<String?>(null) }
-    var rescanDialogVisible by remember { mutableStateOf(false) }
 
     // 一次性提示 → Toast
     LaunchedEffect(Unit) {
         viewModel.events.collect { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
     }
-    // 保存完成：编辑已有规则时提示是否重扫未匹配短信（edge-cases 三）；新增直接返回
+    // 保存完成即返回；重扫引导走全局 Snackbar（UiNotifier），不弹窗打断（v1.1.5 用户裁决）
     LaunchedEffect(Unit) {
-        viewModel.savedEvents.collect { wasEdit ->
-            if (wasEdit) rescanDialogVisible = true else onBack()
-        }
+        viewModel.savedEvents.collect { onBack() }
     }
 
     Scaffold(
@@ -164,7 +161,8 @@ fun RuleEditorScreen(
                     TextField(
                         value = state.ruleName,
                         onValueChange = { viewModel.updateRuleName(it) },
-                        label = "快递公司名",
+                        // 这个输入的是「这条规则叫什么名字」，会显示在快递卡片标题上（如：顺丰速运）
+                        label = "名称（显示在快递卡片标题）",
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         colors = InputFieldColors
@@ -179,18 +177,6 @@ fun RuleEditorScreen(
                     )
                 }
 
-                item {
-                    FieldCard(
-                        fieldName = "📦 快递单号",
-                        dotColor = BrandColors.SF,
-                        state = fieldState(state, ActiveField.TRACKING),
-                        prefix = state.trackingPrefix,
-                        suffix = state.trackingSuffix,
-                        onPrefixChange = { viewModel.updateActiveFieldPrefix(it) },
-                        onSuffixChange = { viewModel.updateActiveFieldSuffix(it) },
-                        onClick = { viewModel.setActiveField(ActiveField.TRACKING) }
-                    )
-                }
                 item {
                     FieldCard(
                         fieldName = "🔑 取件码",
@@ -213,30 +199,6 @@ fun RuleEditorScreen(
                         onPrefixChange = { viewModel.updateActiveFieldPrefix(it) },
                         onSuffixChange = { viewModel.updateActiveFieldSuffix(it) },
                         onClick = { viewModel.setActiveField(ActiveField.ADDRESS) }
-                    )
-                }
-                item {
-                    FieldCard(
-                        fieldName = "📱 快递员电话（可选）",
-                        dotColor = BrandColors.EMS,
-                        state = fieldState(state, ActiveField.PHONE),
-                        prefix = state.phonePrefix,
-                        suffix = state.phoneSuffix,
-                        onPrefixChange = { viewModel.updateActiveFieldPrefix(it) },
-                        onSuffixChange = { viewModel.updateActiveFieldSuffix(it) },
-                        onClick = { viewModel.setActiveField(ActiveField.PHONE) }
-                    )
-                }
-                item {
-                    // senderPattern 是单字符串匹配（对发件方号码做包含过滤），非前后缀锚点对 → 简化版单输入卡片
-                    SingleFieldCard(
-                        fieldName = "📮 发件方过滤",
-                        dotColor = BrandColors.YTO,
-                        state = fieldState(state, ActiveField.SENDER),
-                        value = state.senderPattern,
-                        placeholder = "发件方号码包含（如 1069）",
-                        onValueChange = { viewModel.updateActiveFieldPrefix(it) },
-                        onClick = { viewModel.setActiveField(ActiveField.SENDER) }
                     )
                 }
                 item {
@@ -281,25 +243,6 @@ fun RuleEditorScreen(
 
                 item { Spacer(modifier = Modifier.height(8.dp)) }
             }
-
-            // OverlayDialog 必须组合在 miuix Scaffold 子树内（弹窗由 Scaffold 的 popupHost 渲染），
-            // 放在 content lambda 里而不是与 Scaffold 平级，否则注册不到 popupHost、弹窗不显示。
-            // 常驻组合 + visible 参数：退出动画由 OverlayDialog 的 show 状态驱动，条件组合会跳过它
-            ConfirmDialog(
-                visible = rescanDialogVisible,
-                title = "规则已保存",
-                message = "要用新规则重新扫描之前没匹配到的短信吗？",
-                confirmText = "重新扫描",
-                onConfirm = {
-                    viewModel.rescanUnmatched()
-                    rescanDialogVisible = false
-                    onBack()
-                },
-                onDismiss = {
-                    rescanDialogVisible = false
-                    onBack()
-                }
-            )
         }
     }
 }

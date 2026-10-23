@@ -67,6 +67,12 @@ class PackageRepositoryTest {
         override suspend fun markDayPickedUp(dateMs: Long) {
             store.replaceAll { if (sameDay(it.smsTimestamp, dateMs)) it.copy(isPickedUp = true) else it }
         }
+
+        override suspend fun deleteUnpickedBySmsId(smsId: String): Int {
+            val before = store.size
+            store.removeAll { it.smsId == smsId && !it.isPickedUp }
+            return before - store.size
+        }
     }
 
     private fun ts(day: Int, hour: Int = 12): Long =
@@ -257,5 +263,36 @@ class PackageRepositoryTest {
         repo.insertFromSms(scan(corpus("E030"), 25, "sms-e030"))
         assertEquals(1, dao.store.size, "菜鸟同码重复推送应归并")
         assertEquals(ts(25), dao.store[0].smsTimestamp)
+    }
+
+    // ---- 全量重扫移除失效记录（v1.1.5 用户裁决：规则不匹配即移除，不保留无效取件信息）----
+
+    @Test
+    fun `unmatched unpicked record is removed on refresh`() = runBlocking {
+        val (repo, dao) = newRepo()
+        repo.insertFromSms(rec(day = 13, smsId = "gone-rule"))
+        repo.deleteUnpickedBySmsId("gone-rule")
+        assertEquals(0, dao.store.size, "规则不再匹配的未取件记录应被移除")
+    }
+
+    @Test
+    fun `unmatched picked record survives refresh`() = runBlocking {
+        // 已取件的是历史记录，不是「待办信息」——保留置灰
+        val (repo, dao) = newRepo()
+        repo.insertFromSms(rec(day = 13, smsId = "gone-rule"))
+        dao.updatePickedUp(dao.store[0].id, true)
+        repo.deleteUnpickedBySmsId("gone-rule")
+        assertEquals(1, dao.store.size, "已取件历史不随规则失效移除")
+        assertTrue(dao.store[0].isPickedUp)
+    }
+
+    @Test
+    fun `unrelated records untouched by removal`() = runBlocking {
+        val (repo, dao) = newRepo()
+        repo.insertFromSms(rec(day = 13, smsId = "keep", code = "1111"))
+        repo.insertFromSms(rec(day = 14, smsId = "gone", code = "2222"))
+        repo.deleteUnpickedBySmsId("gone")
+        assertEquals(1, dao.store.size)
+        assertEquals("1111", dao.store[0].pickupCode)
     }
 }

@@ -1,6 +1,8 @@
 package com.quickpick.ui.navigation
 
+import android.app.Activity
 import android.content.Intent
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.calculateEndPadding
@@ -25,8 +27,12 @@ import com.quickpick.ui.screen.*
 import com.quickpick.ui.theme.Background
 import com.quickpick.ui.viewmodel.*
 import com.quickpick.util.JsonExporter
+import com.quickpick.util.UiNotifier
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SnackbarDuration
+import top.yukonga.miuix.kmp.basic.SnackbarHost
+import top.yukonga.miuix.kmp.basic.SnackbarHostState
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 sealed class Screen(val route: String) {
@@ -150,11 +156,40 @@ fun MainScreen(
     val glassHighlight by settingsViewModel.glassHighlight.collectAsStateWithLifecycle()
     val glassAlpha by settingsViewModel.glassAlpha.collectAsStateWithLifecycle()
 
+    // 全局轻提示：跨页动作（规则保存/删除等）统一在这里出 Snackbar
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(Unit) {
+        UiNotifier.messages.collect { msg ->
+            snackbarHostState.showSnackbar(
+                message = msg,
+                actionLabel = "我知道了",
+                duration = SnackbarDuration.Custom(5000)
+            )
+        }
+    }
+
+    // 主页 tab 双击返回退出（2 秒窗口，提示时长与窗口一致）；子页返回键由 NavHost 自己处理
+    val activity = context as? Activity
+    val scope = rememberCoroutineScope()
+    var lastBackAt by remember { mutableLongStateOf(0L) }
+    BackHandler {
+        val now = System.currentTimeMillis()
+        if (now - lastBackAt < 2000) {
+            activity?.finish()
+        } else {
+            lastBackAt = now
+            scope.launch {
+                snackbarHostState.showSnackbar("再按一次退出", duration = SnackbarDuration.Custom(2000))
+            }
+        }
+    }
+
     // 玻璃底栏采样源：先铺页面底色再录内容；内容全出血延伸到栏后（底部留白由各列表 contentPadding 承担）
     val backdrop = rememberGlassBackdrop(scrimColor = Background)
 
     // miuix Scaffold 默认容器色是 surface（白），显式传 Background 保持页面底色
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             LiquidGlassNavigationBar(
                 currentTab = currentTab,
