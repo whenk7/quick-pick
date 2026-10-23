@@ -35,7 +35,7 @@ import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.preference.SliderPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
-import top.yukonga.miuix.kmp.preference.WindowSpinnerPreference
+import top.yukonga.miuix.kmp.preference.OverlaySpinnerPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeColorSpec
 import top.yukonga.miuix.kmp.theme.ThemePaletteStyle
@@ -109,7 +109,7 @@ fun ThemeSettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                 cornerRadius = 16.dp
             ) {
-                WindowSpinnerPreference(
+                OverlaySpinnerPreference(
                     title = "主题模式",
                     items = THEME_MODES.map { DropdownItem(title = it.second) },
                     selectedIndex = THEME_MODES.indexOfFirst { it.first == themeMode }.coerceAtLeast(0),
@@ -122,7 +122,7 @@ fun ThemeSettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                 cornerRadius = 16.dp
             ) {
-                WindowSpinnerPreference(
+                OverlaySpinnerPreference(
                     title = "配色引擎",
                     summary = if (themeEngine == "MONET") "由种子色/壁纸生成整套配色" else "miuix 内置配色",
                     items = THEME_ENGINES.map { DropdownItem(title = it.second) },
@@ -157,13 +157,13 @@ fun ThemeSettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                                 )
                             }
                         }
-                        WindowSpinnerPreference(
+                        OverlaySpinnerPreference(
                             title = "调色板风格",
                             items = STYLE_LABELS.map { DropdownItem(title = it.second) },
                             selectedIndex = STYLE_LABELS.indexOfFirst { it.first == paletteStyle }.coerceAtLeast(0),
                             onSelectedIndexChange = { viewModel.setPaletteStyle(STYLE_LABELS[it].first) }
                         )
-                        WindowSpinnerPreference(
+                        OverlaySpinnerPreference(
                             title = "色彩规格",
                             // 偏好与生效值分离：风格不支持所选规格时生效值回退，不改写用户选择
                             summary = if (supportedSpecs.size > 1) {

@@ -28,7 +28,7 @@ import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.preference.ArrowPreference
-import top.yukonga.miuix.kmp.preference.WindowSpinnerPreference
+import top.yukonga.miuix.kmp.preference.OverlaySpinnerPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /** 扫描窗口档位（天 → 显示名） */
@@ -86,7 +86,7 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth(),
             cornerRadius = 16.dp
         ) {
-            WindowSpinnerPreference(
+            OverlaySpinnerPreference(
                 title = "扫描范围",
                 summary = "只扫描该时间段内的短信",
                 items = SCAN_WINDOW_LABELS.map { DropdownItem(title = it.second) },
