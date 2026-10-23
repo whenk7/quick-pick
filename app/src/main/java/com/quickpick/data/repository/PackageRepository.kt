@@ -39,10 +39,17 @@ class PackageRepository(private val dao: PackageRecordDao) {
         if (smsId != null) {
             val existing = dao.findBySmsId(smsId)
             if (existing != null) {
-                // v1→v2 迁移后老记录 sms_thread_id 为 NULL，重扫命中查重时回填，
-                // 否则升级用户的历史记录永远看不到「查看短信」（spec §九「重扫后补齐」）
-                if (existing.smsThreadId == null && record.smsThreadId != null) {
-                    dao.update(existing.copy(smsThreadId = record.smsThreadId))
+                // 迁移后老记录的新列（threadId v2 / sender v3）为 NULL，重扫命中查重时回填，
+                // 否则升级用户的历史记录永远看不到「查看短信」/发件人（spec §九「重扫后补齐」）
+                val needThread = existing.smsThreadId == null && record.smsThreadId != null
+                val needSender = existing.smsSender == null && record.smsSender != null
+                if (needThread || needSender) {
+                    dao.update(
+                        existing.copy(
+                            smsThreadId = record.smsThreadId ?: existing.smsThreadId,
+                            smsSender = record.smsSender ?: existing.smsSender
+                        )
+                    )
                 }
                 return
             }
@@ -85,7 +92,8 @@ class PackageRepository(private val dao: PackageRecordDao) {
                         trackingNumber = record.trackingNumber ?: existing.trackingNumber,
                         address = record.address ?: existing.address,
                         phone = record.phone ?: existing.phone,
-                        smsThreadId = record.smsThreadId ?: existing.smsThreadId
+                        smsThreadId = record.smsThreadId ?: existing.smsThreadId,
+                        smsSender = record.smsSender ?: existing.smsSender
                     )
                 )
                 return
@@ -100,7 +108,8 @@ class PackageRepository(private val dao: PackageRecordDao) {
         address = address, phone = phone,
         smsBody = smsBody, smsTimestamp = smsTimestamp,
         isPickedUp = isPickedUp,
-        ruleId = ruleId, smsId = smsId, smsThreadId = smsThreadId
+        ruleId = ruleId, smsId = smsId, smsThreadId = smsThreadId,
+        smsSender = smsSender
     )
 
     private fun PackageRecord.toEntity() = PackageRecordEntity(
@@ -109,6 +118,7 @@ class PackageRepository(private val dao: PackageRecordDao) {
         address = address, phone = phone,
         smsBody = smsBody, smsTimestamp = smsTimestamp,
         isPickedUp = isPickedUp,
-        ruleId = ruleId, smsId = smsId, smsThreadId = smsThreadId
+        ruleId = ruleId, smsId = smsId, smsThreadId = smsThreadId,
+        smsSender = smsSender
     )
 }

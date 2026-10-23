@@ -119,4 +119,29 @@ class RuleListClickTest {
         composeRule.onAllNodesWithText("复制到剪贴板", substring = true, useUnmergedTree = true)
             .fetchSemanticsNodes().isNotEmpty().let { assert(it) { "导出弹窗未渲染" } }
     }
+
+    @Test
+    fun `sms detail dialog renders with sender time and body`() {
+        composeRule.setContent {
+            QuickPickTheme {
+                top.yukonga.miuix.kmp.basic.Scaffold {
+                    com.quickpick.ui.component.SmsDetailDialog(
+                        show = true,
+                        record = com.quickpick.domain.model.PackageRecord(
+                            companyName = "圆通速递", pickupCode = "44651320",
+                            smsBody = "【圆通速递】取货码44651320，您有圆通包裹已到绿洲家园西南门袋鼠柜A01",
+                            smsTimestamp = 1700000000000L, smsSender = "10684110405676900"
+                        ),
+                        onDismiss = {}
+                    )
+                }
+            }
+        }
+        composeRule.waitForIdle()
+        composeRule.onRoot().captureRoboImage("build/outputs/review/dialog_sms_detail.png")
+        composeRule.onAllNodesWithText("10684110405676900", substring = true, useUnmergedTree = true)
+            .fetchSemanticsNodes().isNotEmpty().let { assert(it) { "短信原文弹窗缺发件人" } }
+        composeRule.onAllNodesWithText("取货码44651320", substring = true, useUnmergedTree = true)
+            .fetchSemanticsNodes().isNotEmpty().let { assert(it) { "短信原文弹窗缺正文" } }
+    }
 }

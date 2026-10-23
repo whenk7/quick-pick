@@ -119,7 +119,8 @@ class PackageListViewModel(
                                 smsTimestamp = sms.timestamp,
                                 ruleId = rule.id,
                                 smsId = sms.id,
-                                smsThreadId = sms.threadId
+                                smsThreadId = sms.threadId,
+                                smsSender = sms.address
                             )
                         )
                     }

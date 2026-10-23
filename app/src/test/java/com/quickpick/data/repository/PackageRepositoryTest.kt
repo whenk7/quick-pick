@@ -87,11 +87,12 @@ class PackageRepositoryTest {
         day: Int = 13,
         hour: Int = 12,
         smsId: String? = null,
-        threadId: Long? = null
+        threadId: Long? = null,
+        sender: String? = null
     ) = PackageRecord(
         companyName = company, trackingNumber = tracking, pickupCode = code,
         address = address, smsBody = body, smsTimestamp = ts(day, hour),
-        smsId = smsId, smsThreadId = threadId
+        smsId = smsId, smsThreadId = threadId, smsSender = sender
     )
 
     private fun newRepo(): Pair<PackageRepository, FakeDao> {
@@ -117,6 +118,17 @@ class PackageRepositoryTest {
         repo.insertFromSms(rec(day = 13, smsId = "s1", threadId = 555L))
         assertEquals(1, dao.store.size)
         assertEquals(555L, dao.store[0].smsThreadId)
+    }
+
+    @Test
+    fun `same smsId backfills smsSender on rescan`() = runBlocking {
+        // v3 老记录 sender 为 NULL，重扫回填（短信原文弹窗的发件人）
+        val (repo, dao) = newRepo()
+        repo.insertFromSms(rec(day = 13, smsId = "s1", threadId = null))
+        dao.store[0] = dao.store[0].copy(smsSender = null)   // 模拟 v2 老记录
+        repo.insertFromSms(rec(day = 13, smsId = "s1", threadId = 555L, sender = "10684110405676900"))
+        assertEquals(1, dao.store.size)
+        assertEquals("10684110405676900", dao.store[0].smsSender)
     }
 
     @Test

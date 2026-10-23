@@ -67,13 +67,20 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
+/** v2→v3：package_records 加 sms_sender（发件人号码，「短信原文」弹窗用）。纯加列，零数据风险 */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE package_records ADD COLUMN sms_sender TEXT")
+    }
+}
+
 @Database(
     entities = [
         MatchRuleEntity::class,
         PackageRecordEntity::class,
         ScannedSmsEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -92,7 +99,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "quickpick.db"
                 )
-                    .addMigrations(MIGRATION_1_2)   // 不加 fallbackToDestructiveMigration：迁移失败就崩，比静默丢数据安全
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)   // 不加 fallbackToDestructiveMigration：迁移失败就崩，比静默丢数据安全
                     .build()
                 INSTANCE = instance
                 instance

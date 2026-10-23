@@ -126,4 +126,26 @@ class PresetRulesTest {
         assertEquals(2, dao.store.size, "seed 已是最新形态，v3 不应再改出第三条")
         assertEquals("取货码", dao.getByName("京东物流").single().codePrefix)
     }
+
+    @Test
+    fun `every preset extracts pickup code from its own sample sms`() {
+        // 自洽性不变量：sampleSms 是编辑器预览的样例，提不出码就是规则自身矛盾
+        PresetRules.all.forEach { entity ->
+            val rule = com.quickpick.domain.model.MatchRule(
+                name = entity.name,
+                codePrefix = entity.codePrefix, codeSuffix = entity.codeSuffix,
+                addressPrefix = entity.addressPrefix, addressSuffix = entity.addressSuffix,
+                trackingPrefix = entity.trackingPrefix, trackingSuffix = entity.trackingSuffix,
+                phonePrefix = entity.phonePrefix, phoneSuffix = entity.phoneSuffix,
+                brandPrefix = entity.brandPrefix, brandSuffix = entity.brandSuffix
+            )
+            val fields = com.quickpick.domain.engine.MatchEngine.extract(
+                entity.sampleSms ?: error("${entity.name} 预置缺 sampleSms"), rule
+            )
+            assertTrue(
+                !fields.pickupCode.isNullOrBlank(),
+                "${entity.name} 预置规则从自己的样例短信里没提出取件码"
+            )
+        }
+    }
 }

@@ -12,5 +12,6 @@ data class PackageRecord(
     val isPickedUp: Boolean = false,
     val ruleId: Long? = null,
     val smsId: String? = null,
-    val smsThreadId: Long? = null
+    val smsThreadId: Long? = null,
+    val smsSender: String? = null
 )

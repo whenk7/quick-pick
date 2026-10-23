@@ -19,8 +19,8 @@ android {
         applicationId = "com.quickpick"
         minSdk = 33
         targetSdk = 37
-        versionCode = 7
-        versionName = "1.1.5"
+        versionCode = 8
+        versionName = "1.1.6"
     }
 
     signingConfigs {

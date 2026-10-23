@@ -1,9 +1,5 @@
 package com.quickpick.ui.component
 
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -41,6 +37,7 @@ fun PackageCard(
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var showSmsDetail by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val brandColor = BrandColors.forName(record.companyName)
     // 已取件：内容整体 50% 透明（置灰保留，不删除）
@@ -237,51 +234,20 @@ fun PackageCard(
                         record.phone?.let { phone ->
                             DetailRow("电话", phone) { onCopyField(phone) }
                         }
-                        // 跳原短信：仅 threadId 存在的记录显示（旧数据可能没存）
-                        record.smsThreadId?.let { threadId ->
-                            InlineTextButton(
-                                text = "查看短信",
-                                onClick = { openSmsThread(context, threadId) },
-                                modifier = Modifier.padding(top = 2.dp)
-                            )
-                        }
+                        // 短信原文弹窗（v1.1.6 起不再跳系统短信应用——OEM 会话 URI 兼容性差）
+                        InlineTextButton(
+                            text = "查看短信",
+                            onClick = { showSmsDetail = true },
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
                     }
                 }
             }
         }
     }
-}
 
-/**
- * 跳到系统短信应用的对应会话。三级兜底（v1.1.5：MIUI 等 OEM 短信应用不认会话 URI 会闪退/无反应）：
- * 1) content 会话 URI（AOSP/Google 信息可用；threadId 是 Telephony 会话 ID 不是手机号）
- * 2) 拉起默认短信应用首页
- * 3) 都没有 → 温和 toast，不崩溃
- */
-private fun openSmsThread(context: Context, threadId: Long) {
-    fun openConversation(): Boolean = try {
-        context.startActivity(
-            Intent(Intent.ACTION_VIEW, Uri.parse("content://mms-sms/conversations/$threadId"))
-        )
-        true
-    } catch (_: Exception) {
-        false
-    }
-
-    fun openSmsApp(): Boolean = try {
-        val pkg = android.provider.Telephony.Sms.getDefaultSmsPackage(context)
-        val intent = pkg?.let { context.packageManager.getLaunchIntentForPackage(it) }
-        if (intent != null) {
-            context.startActivity(intent)
-            true
-        } else false
-    } catch (_: Exception) {
-        false
-    }
-
-    if (openConversation()) return
-    if (openSmsApp()) return
-    Toast.makeText(context, "没找到能打开短信的应用～", Toast.LENGTH_SHORT).show()
+    // 短信原文弹窗：常驻组合 + show 参数（退出动画约定同 ConfirmDialog）
+    SmsDetailDialog(show = showSmsDetail, record = record, onDismiss = { showSmsDetail = false })
 }
 
 @Composable
