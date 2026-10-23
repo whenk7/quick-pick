@@ -23,6 +23,9 @@ class PackageRepository(private val dao: PackageRecordDao) {
     /** 全量重扫新语义（v1.1.5 用户裁决）：当前规则匹配不上 → 移除失效的未取件记录 */
     suspend fun deleteUnpickedBySmsId(smsId: String) = dao.deleteUnpickedBySmsId(smsId)
 
+    /** 删光全部规则后的重扫（v1.1.7）：清空全部未取件记录，已取件历史保留 */
+    suspend fun deleteAllUnpicked() = dao.deleteAllUnpicked()
+
     /**
      * 扫描入库（含去重与换柜覆盖，对应 edge-cases 五）：
      * - 同一条短信（smsId）→ 跳过（顺带回填老记录的 smsThreadId）

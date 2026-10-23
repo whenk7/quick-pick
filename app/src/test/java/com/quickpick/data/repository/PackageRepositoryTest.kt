@@ -73,6 +73,10 @@ class PackageRepositoryTest {
             store.removeAll { it.smsId == smsId && !it.isPickedUp }
             return before - store.size
         }
+
+        override suspend fun deleteAllUnpicked() {
+            store.removeAll { !it.isPickedUp }
+        }
     }
 
     private fun ts(day: Int, hour: Int = 12): Long =
@@ -306,5 +310,27 @@ class PackageRepositoryTest {
         repo.deleteUnpickedBySmsId("gone")
         assertEquals(1, dao.store.size)
         assertEquals("1111", dao.store[0].pickupCode)
+    }
+
+    // ---- 删光规则后的全量重扫（v1.1.7 §1.1：无规则 = 一切不匹配，未取件清空）----
+
+    @Test
+    fun `deleteAllUnpicked removes only unpicked records`() = runBlocking {
+        val (repo, dao) = newRepo()
+        repo.insertFromSms(rec(day = 13, smsId = "a", code = "1111"))
+        repo.insertFromSms(rec(day = 14, smsId = "b", code = "2222"))
+        repo.insertFromSms(rec(day = 15, smsId = "c", code = "3333"))
+        dao.updatePickedUp(dao.store.first { it.smsId == "b" }.id, true)
+        repo.deleteAllUnpicked()
+        assertEquals(1, dao.store.size, "未取件全删，已取件历史保留")
+        assertTrue(dao.store[0].isPickedUp)
+        assertEquals("2222", dao.store[0].pickupCode)
+    }
+
+    @Test
+    fun `deleteAllUnpicked on empty store is no-op`() = runBlocking {
+        val (repo, dao) = newRepo()
+        repo.deleteAllUnpicked()
+        assertEquals(0, dao.store.size)
     }
 }

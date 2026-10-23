@@ -43,4 +43,8 @@ interface PackageRecordDao {
     /** 全量重扫时移除失效记录：当前规则不再匹配的未取件记录（已取件的是历史，保留置灰） */
     @Query("DELETE FROM package_records WHERE sms_id = :smsId AND is_picked_up = 0")
     suspend fun deleteUnpickedBySmsId(smsId: String): Int
+
+    /** 删光全部规则后的全量重扫（v1.1.7）：无规则 = 一切不匹配，未取件全清；已取件历史保留 */
+    @Query("DELETE FROM package_records WHERE is_picked_up = 0")
+    suspend fun deleteAllUnpicked()
 }

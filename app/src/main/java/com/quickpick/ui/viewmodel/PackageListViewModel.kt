@@ -101,7 +101,11 @@ class PackageListViewModel(
                 _scannedCount.value = smsRepo.scannedCount()
 
                 val rules = ruleRepo.getAll()
-                if (rules.isEmpty()) return@launch
+                if (rules.isEmpty()) {
+                    // 无规则 = 一切不匹配（v1.1.7）：手动重扫清空未取件；增量扫描不动存量
+                    if (removeUnmatched) packageRepo.deleteAllUnpicked()
+                    return@launch
+                }
 
                 messages.forEach { sms ->
                     if (smsRepo.isScanned(sms.id)) return@forEach
