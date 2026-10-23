@@ -15,18 +15,16 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val scanWindowDays: StateFlow<Int> = settingsStore.scanWindowDays
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 7)
 
-    // ---- 主题（2026-10-22 重做，老 colorMode/useMonet 弃用） ----
+    // ---- 主题（v1.1.7 砍引擎；老 colorMode/useMonet/themeEngine 弃用） ----
     val themeMode: StateFlow<String> = settingsStore.themeMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "SYSTEM")
 
-    val themeEngine: StateFlow<String> = settingsStore.themeEngine
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "FIXED")
-
     val dynamicColor: StateFlow<Boolean> = settingsStore.dynamicColor
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    val seedColor: StateFlow<Int> = settingsStore.seedColor
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0xFF3482FF.toInt())
+    /** null = miuix 默认板（网格首项「默认」选中态） */
+    val seedColor: StateFlow<Int?> = settingsStore.seedColor
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val paletteStyle: StateFlow<String> = settingsStore.paletteStyle
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "TonalSpot")
@@ -55,15 +53,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch { settingsStore.setThemeMode(mode) }
     }
 
-    fun setThemeEngine(engine: String) {
-        viewModelScope.launch { settingsStore.setThemeEngine(engine) }
-    }
-
     fun setDynamicColor(enabled: Boolean) {
         viewModelScope.launch { settingsStore.setDynamicColor(enabled) }
     }
 
-    fun setSeedColor(argb: Int) {
+    fun setSeedColor(argb: Int?) {
         viewModelScope.launch { settingsStore.setSeedColor(argb) }
     }
 

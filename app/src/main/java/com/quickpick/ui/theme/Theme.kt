@@ -18,10 +18,10 @@ import top.yukonga.miuix.kmp.theme.ThemeController
 import top.yukonga.miuix.kmp.theme.ThemePaletteStyle
 
 /**
- * 主题引擎（双路径，模式参考 InstallerX-Revived）：
- * - FIXED：miuix 内置默认明暗板（lightColorScheme/darkColorScheme 不传参）
- * - MONET：MonetSystem/Light/Dark；keyColor = null 走壁纸/系统调色板（动态取色开且 API≥31），
- *   否则用用户选的种子色从 materialkolor 生成
+ * 主题引擎（v1.1.7 §7 砍掉「固定/动态」概念，统一为一套选项）：
+ * - 动态取色开（API≥31）→ Monet + keyColor=null（壁纸/系统调色板）
+ * - 关动态 + 选了种子色 → Monet + keyColor=种子色
+ * - 关动态 + 未选种子色（默认）→ miuix 内置板（不传 keyColor）
  * 偏好与生效值分离：风格不支持所选色彩规格时生效值回退 2021，不改写存储的偏好。
  */
 
@@ -38,14 +38,25 @@ fun ThemePaletteStyle.supportedSpecs(): List<ThemeColorSpec> = when (this) {
 fun ThemePaletteStyle.effectiveSpec(preferred: ThemeColorSpec): ThemeColorSpec =
     preferred.takeIf { it in supportedSpecs() } ?: ThemeColorSpec.Spec2021
 
+/** 主题决策（纯函数便于单测）：monet=false 时走 miuix 内置板；keyColor=null 且 monet=true 时壁纸取色 */
+data class ThemeDecision(val monet: Boolean, val keyColor: Int?)
+
+fun resolveTheme(dynamicColor: Boolean, seedColor: Int?, sdkInt: Int): ThemeDecision {
+    val dynamicEffective = dynamicColor && sdkInt >= Build.VERSION_CODES.S
+    return when {
+        dynamicEffective -> ThemeDecision(monet = true, keyColor = null)
+        seedColor != null -> ThemeDecision(monet = true, keyColor = seedColor)
+        else -> ThemeDecision(monet = false, keyColor = null)
+    }
+}
+
 @Composable
 fun QuickPickTheme(content: @Composable () -> Unit) {
     // 主题偏好从 DataStore 读；异步首帧用默认值，接受首帧闪烁（裁决，见迁移计划 Review Focus #5）
     val settingsStore = (LocalContext.current.applicationContext as QuickPickApp).settingsStore
     val themeMode by settingsStore.themeMode.collectAsStateWithLifecycle(initialValue = "SYSTEM")
-    val themeEngine by settingsStore.themeEngine.collectAsStateWithLifecycle(initialValue = "FIXED")
-    val dynamicColor by settingsStore.dynamicColor.collectAsStateWithLifecycle(initialValue = true)
-    val seedColor by settingsStore.seedColor.collectAsStateWithLifecycle(initialValue = 0xFF3482FF.toInt())
+    val dynamicColor by settingsStore.dynamicColor.collectAsStateWithLifecycle(initialValue = false)
+    val seedColor by settingsStore.seedColor.collectAsStateWithLifecycle(initialValue = null)
     val paletteStyle by settingsStore.paletteStyle.collectAsStateWithLifecycle(initialValue = "TonalSpot")
     val colorSpec by settingsStore.colorSpec.collectAsStateWithLifecycle(initialValue = "Spec2025")
 
@@ -53,22 +64,19 @@ fun QuickPickTheme(content: @Composable () -> Unit) {
         ?: ThemePaletteStyle.TonalSpot
     val preferredSpec = ThemeColorSpec.entries.firstOrNull { it.name == colorSpec }
         ?: ThemeColorSpec.Spec2025
+    val sdk = Build.VERSION.SDK_INT
 
     // ThemeController 属性无公开 setter，偏好变化时重建 controller 生效
-    val controller = remember(themeMode, themeEngine, dynamicColor, seedColor, paletteStyle, colorSpec) {
-        if (themeEngine == "MONET") {
+    val controller = remember(themeMode, dynamicColor, seedColor, paletteStyle, colorSpec) {
+        val decision = resolveTheme(dynamicColor, seedColor, sdk)
+        if (decision.monet) {
             ThemeController(
                 colorSchemeMode = when (themeMode) {
                     "LIGHT" -> ColorSchemeMode.MonetLight
                     "DARK" -> ColorSchemeMode.MonetDark
                     else -> ColorSchemeMode.MonetSystem
                 },
-                // keyColor=null → platformDynamicColors（壁纸/系统调色板）；否则种子色生成
-                keyColor = if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    null
-                } else {
-                    Color(seedColor)
-                },
+                keyColor = decision.keyColor?.let { Color(it) },
                 paletteStyle = style,
                 colorSpec = style.effectiveSpec(preferredSpec)
             )

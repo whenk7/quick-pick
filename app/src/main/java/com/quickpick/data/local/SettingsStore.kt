@@ -25,9 +25,8 @@ class SettingsStore(private val context: Context) : PresetFlags {
         private val KEY_PRESET_V4_SEEDED = booleanPreferencesKey("preset_v4_seeded")
         private val KEY_SCAN_WINDOW_DAYS = intPreferencesKey("scan_window_days")
 
-        // 主题（2026-10-22 重做；老键 color_mode/use_monet 弃用不迁移）
+        // 主题（v1.1.7 砍引擎：theme_engine 键废弃不迁移；seed_color 缺失 = miuix 默认板）
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
-        private val KEY_THEME_ENGINE = stringPreferencesKey("theme_engine")
         private val KEY_DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         private val KEY_SEED_COLOR = intPreferencesKey("seed_color")
         private val KEY_PALETTE_STYLE = stringPreferencesKey("palette_style")
@@ -100,28 +99,25 @@ class SettingsStore(private val context: Context) : PresetFlags {
         context.dataStore.edit { it[KEY_THEME_MODE] = mode }
     }
 
-    /** 配色引擎："FIXED"（miuix 内置板）/ "MONET"（动态配色） */
-    val themeEngine: Flow<String> =
-        context.dataStore.data.map { it[KEY_THEME_ENGINE] ?: "FIXED" }
-
-    suspend fun setThemeEngine(engine: String) {
-        context.dataStore.edit { it[KEY_THEME_ENGINE] = engine }
-    }
-
-    /** Monet 内的动态取色（壁纸/系统调色板，Android 12+ 才有意义） */
+    /**
+     * 动态取色（壁纸/系统调色板，Android 12+ 才有意义）。
+     * v1.1.7 起默认 false：原 FIXED 用户键缺失，若默认 true 升级后会从固定板跳到壁纸 Monet。
+     */
     val dynamicColor: Flow<Boolean> =
-        context.dataStore.data.map { it[KEY_DYNAMIC_COLOR] ?: true }
+        context.dataStore.data.map { it[KEY_DYNAMIC_COLOR] ?: false }
 
     suspend fun setDynamicColor(enabled: Boolean) {
         context.dataStore.edit { it[KEY_DYNAMIC_COLOR] = enabled }
     }
 
-    /** 种子色（动态取色关闭或 API<31 时作为 Monet 种子），默认 miuix 主题蓝 */
-    val seedColor: Flow<Int> =
-        context.dataStore.data.map { it[KEY_SEED_COLOR] ?: 0xFF3482FF.toInt() }
+    /** 种子色；null（键缺失）= miuix 默认板（v1.1.7 §7 网格首项「默认」） */
+    val seedColor: Flow<Int?> =
+        context.dataStore.data.map { it[KEY_SEED_COLOR] }
 
-    suspend fun setSeedColor(argb: Int) {
-        context.dataStore.edit { it[KEY_SEED_COLOR] = argb }
+    suspend fun setSeedColor(argb: Int?) {
+        context.dataStore.edit {
+            if (argb == null) it.remove(KEY_SEED_COLOR) else it[KEY_SEED_COLOR] = argb
+        }
     }
 
     /** 调色板风格（ThemePaletteStyle 枚举名），默认 TonalSpot */

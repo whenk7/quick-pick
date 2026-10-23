@@ -139,13 +139,10 @@ class VisualReviewTest {
 
     // ---- 页面级 ----
 
-    private fun settingsVm(engine: String? = null): SettingsViewModel {
+    private fun settingsVm(dynamic: Boolean? = null): SettingsViewModel {
         val app = ApplicationProvider.getApplicationContext<QuickPickApp>()
-        if (engine != null) {
-            runBlocking {
-                app.settingsStore.setThemeEngine(engine)
-                app.settingsStore.setDynamicColor(false)   // 让种子色网格也入镜
-            }
+        if (dynamic != null) {
+            runBlocking { app.settingsStore.setDynamicColor(dynamic) }
         }
         return SettingsViewModel(app)
     }
@@ -167,10 +164,10 @@ class VisualReviewTest {
         }
 
     @Test
-    fun `theme page monet expanded`() =
+    fun `theme page seed grid expanded`() =
         captureRoboImage("build/outputs/review/page_theme_monet.png") {
             MiuixTheme(controller = fixed(ColorSchemeMode.Light), textStyles = AppTypography) {
-                ThemeSettingsScreen(viewModel = settingsVm("MONET"), onBack = {})
+                ThemeSettingsScreen(viewModel = settingsVm(dynamic = false), onBack = {})
             }
         }
 
