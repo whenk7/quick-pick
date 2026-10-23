@@ -105,6 +105,7 @@ UI：v1.1.0 起 M3 全面迁移到 miuix 0.9.4（ui+blur），app/src 零 materi
 - ✅ v1.1.4（versionCode 6）：预置规则极简重置（顺丰/京东只留取件码+品牌，preset_v3 覆盖升级）+ 规则工坊（规则页横排三按钮：导入弹窗粘贴/文件双通道、导出复制/存文件、AI 生成页重写——短信样本审查+手动补齐+提示词一键复制+直接粘贴入库）+ 设置页规则相关入口移除
 - ✅ v1.1.5（versionCode 7）：规则编辑/删除/新增改 Snackbar 轻提示（5s 可关，不弹窗）；下拉重扫移除规则不匹配的未取件记录（已取件历史保留置灰）；主页双击返回退出（2s 窗口）；已取件卡片紧凑单行化；规则编辑器字段裁到 名称/取件码/地址/品牌（发件方/单号/电话移除——端口常变不可靠、无用字段）；预置 preset_v4 清 senderPattern；跳短信三级兜底（会话 URI → 默认短信应用 → 温和提示，MIUI 不认会话 URI 的坑）
 - ✅ v1.1.6（versionCode 8）：「查看短信」改应用内原文弹窗（发件人/时间/正文/复制全文，替代跳系统短信应用）；Room v3 加 sms_sender 列（老记录 NULL，重扫回填）；预置规则自洽测试（从 sampleSms 必能提出取件码）
+- ✅ v1.1.7（versionCode 9，feat/v1.1.7）：反馈批次+沉浸模式。spec `docs/superpowers/specs/2026-10-23-v1.1.7-feedback-batch.md`，plan 同名 plans/。要点：删光规则重扫清空未取件；弹窗返回语义（可关=返回关/裁决=吞返回堵点外部，miuix OverlayDialog 不消费返回键故自拦）；Snackbar 新顶旧（miuix host 多条并存模型 → 自管理 CoalescingSnackbarHost）；卡片三行无展开无复制（单击无功能/长按原文/左滑已取件 SwipeToReveal 35% 阈值）；规则名纯记忆化，卡片标题 fallback「快递」；全局地址簿（DataStore，显示层替换）；主题砍引擎（动态取色开关+种子色网格+miuix 默认，seedColor 可空化，dynamicColor 默认改 false）；首页副标题「N 件待取 · 近三月」；规则页四按钮（自绘 QpIcons）；导入弹窗右侧竖排本地文件；沉浸模式（长按底栏快递，DampedDrag 钩子实现长按——pointerInput 旁观会掐死点击；onDrag(Zero) 按下即发）
 - ⬜ 真机验收（清单见下一步）
 
 ## 执行模式（已和用户商定）
