@@ -180,11 +180,12 @@ class PackageListViewModel(
         }
     }
 
-    /** 手动删除记录（v1.1.8 原文弹窗）：无论是否已取件；短信加忽略名单防重扫复活 */
+    /** 手动删除记录（v1.1.8 原文弹窗）：无论是否已取件；
+     *  短信加忽略名单防重扫复活——含归并时被顶掉的旧短信（mergedSmsIds，终审修复） */
     fun deleteRecord(record: PackageRecord) {
         viewModelScope.launch {
             packageRepo.deleteById(record.id)
-            record.smsId?.let { settingsStore.ignoreSms(it) }
+            (listOfNotNull(record.smsId) + record.mergedSmsIds).forEach { settingsStore.ignoreSms(it) }
             UiNotifier.notify("已删除该快递信息")
         }
     }

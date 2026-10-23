@@ -72,7 +72,13 @@ class PackageRepository(private val dao: PackageRecordDao) {
                 }
                 // 全量重扫按时间倒序处理，旧短信后到——不许用旧取件码覆盖新记录
                 if (existing.smsTimestamp >= record.smsTimestamp) return
-                dao.update(record.toEntity().copy(id = existing.id, createdAt = existing.createdAt))
+                // 覆盖时把被顶掉的旧短信 id 收进 mergedSmsIds（删除时全忽略，防重扫复活）
+                dao.update(
+                    record.toEntity().copy(
+                        id = existing.id, createdAt = existing.createdAt,
+                        mergedSmsIds = encodeMerged(decodeMerged(existing.mergedSmsIds) + listOfNotNull(existing.smsId))
+                    )
+                )
                 return
             }
         }
@@ -102,7 +108,9 @@ class PackageRepository(private val dao: PackageRecordDao) {
                         address = record.address ?: existing.address,
                         phone = record.phone ?: existing.phone,
                         smsThreadId = record.smsThreadId ?: existing.smsThreadId,
-                        smsSender = record.smsSender ?: existing.smsSender
+                        smsSender = record.smsSender ?: existing.smsSender,
+                        // 归并时把被顶掉的旧短信 id 收进 mergedSmsIds（删除时全忽略，防重扫复活）
+                        mergedSmsIds = encodeMerged(decodeMerged(existing.mergedSmsIds) + listOfNotNull(existing.smsId))
                     )
                 )
                 return
@@ -118,7 +126,8 @@ class PackageRepository(private val dao: PackageRecordDao) {
         smsBody = smsBody, smsTimestamp = smsTimestamp,
         isPickedUp = isPickedUp,
         ruleId = ruleId, smsId = smsId, smsThreadId = smsThreadId,
-        smsSender = smsSender
+        smsSender = smsSender,
+        mergedSmsIds = decodeMerged(mergedSmsIds)
     )
 
     private fun PackageRecord.toEntity() = PackageRecordEntity(
@@ -128,6 +137,17 @@ class PackageRepository(private val dao: PackageRecordDao) {
         smsBody = smsBody, smsTimestamp = smsTimestamp,
         isPickedUp = isPickedUp,
         ruleId = ruleId, smsId = smsId, smsThreadId = smsThreadId,
-        smsSender = smsSender
+        smsSender = smsSender,
+        mergedSmsIds = encodeMerged(mergedSmsIds)
     )
+
+    companion object {
+        private val gson = com.google.gson.Gson()
+        private val listType = object : com.google.gson.reflect.TypeToken<List<String>>() {}.type
+
+        fun decodeMerged(json: String): List<String> =
+            runCatching { gson.fromJson<List<String>>(json, listType) }.getOrNull() ?: emptyList()
+
+        fun encodeMerged(ids: List<String>): String = gson.toJson(ids.distinct())
+    }
 }

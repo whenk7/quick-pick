@@ -215,8 +215,8 @@ fun PackageCard(
 
     // 短信原文弹窗：常驻组合 + show 参数（退出动画约定同 ConfirmDialog）
     SmsDetailDialog(
-            show = showSmsDetail, record = record,
-            onDismiss = { showSmsDetail = false },
-            onDelete = onDelete?.let { del -> { del(); showSmsDetail = false } }
-        )
+        show = showSmsDetail, record = record,
+        onDismiss = { showSmsDetail = false },
+        onDelete = onDelete?.let { del -> { del(); showSmsDetail = false } }
+    )
 }

@@ -4,16 +4,16 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.quickpick.QuickPickApp
+import com.quickpick.data.repository.PackageRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val settingsStore = (application as QuickPickApp).settingsStore
-    private val packageRepo =
-        com.quickpick.data.repository.PackageRepository(
-            (application as QuickPickApp).database.packageRecordDao()
-        )
+    private val packageRepo = PackageRepository(
+        (application as QuickPickApp).database.packageRecordDao()
+    )
 
     // 偏好读写（初值与 SettingsStore 默认值一致）
     val scanWindowDays: StateFlow<Int> = settingsStore.scanWindowDays

@@ -13,5 +13,7 @@ data class PackageRecord(
     val ruleId: Long? = null,
     val smsId: String? = null,
     val smsThreadId: Long? = null,
-    val smsSender: String? = null
+    val smsSender: String? = null,
+    /** 归并/换柜时被顶掉的旧短信 id（v1.1.8）：删除记录时全部进忽略名单防重扫复活 */
+    val mergedSmsIds: List<String> = emptyList()
 )

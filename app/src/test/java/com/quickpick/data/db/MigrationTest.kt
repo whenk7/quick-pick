@@ -115,4 +115,66 @@ class MigrationTest {
             db.close()
         }
     }
+
+    @Test
+    fun `v3 to v4 adds merged_sms_ids with empty default`() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(null)
+                .callback(object : SupportSQLiteOpenHelper.Callback(3) {
+                    override fun onConfigure(db: androidx.sqlite.db.SupportSQLiteDatabase) {}
+
+                    override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                        // v3 形状的 package_records（无 merged_sms_ids）
+                        db.execSQL(
+                            """
+                            CREATE TABLE package_records (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                                company_name TEXT NOT NULL,
+                                tracking_number TEXT,
+                                pickup_code TEXT,
+                                address TEXT,
+                                phone TEXT,
+                                sms_body TEXT NOT NULL,
+                                sms_timestamp INTEGER NOT NULL,
+                                is_picked_up INTEGER NOT NULL,
+                                rule_id INTEGER,
+                                sms_id TEXT,
+                                sms_thread_id INTEGER,
+                                sms_sender TEXT,
+                                created_at INTEGER NOT NULL
+                            )
+                            """.trimIndent()
+                        )
+                        db.execSQL(
+                            "INSERT INTO package_records (company_name, pickup_code, sms_body, sms_timestamp, is_picked_up, created_at) " +
+                                "VALUES ('菜鸟驿站', '4-5-0877', '正文', 1700000000000, 0, 1700000000000)"
+                        )
+                    }
+
+                    override fun onUpgrade(
+                        db: androidx.sqlite.db.SupportSQLiteDatabase,
+                        oldVersion: Int,
+                        newVersion: Int
+                    ) {
+                    }
+                })
+                .build()
+        )
+
+        helper.writableDatabase.use { db ->
+            MIGRATION_3_4.migrate(db)
+            val cols = mutableListOf<String>()
+            db.query("PRAGMA table_info(package_records)").use { c ->
+                while (c.moveToNext()) cols.add(c.getString(1))
+            }
+            assertTrue("merged_sms_ids" in cols, "迁移后应有 merged_sms_ids 列")
+            db.query("SELECT pickup_code, merged_sms_ids FROM package_records").use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("4-5-0877", c.getString(0))
+                assertEquals("[]", c.getString(1), "老记录默认空列表")
+            }
+        }
+    }
 }

@@ -29,5 +29,8 @@ data class PackageRecordEntity(
     @ColumnInfo(name = "sms_thread_id") val smsThreadId: Long? = null,
     // v3（2026-10-23）：发件人号码，「短信原文」弹窗展示用；老记录为 NULL，重扫回填
     @ColumnInfo(name = "sms_sender") val smsSender: String? = null,
+    // v4（2026-10-23）：归并/换柜覆盖时被顶掉的旧短信 id 列表（JSON 数组），
+    // 删除记录时全部进忽略名单——否则重扫会用旧短信把记录复活（终审 Important #1）
+    @ColumnInfo(name = "merged_sms_ids", defaultValue = "[]") val mergedSmsIds: String = "[]",
     @ColumnInfo(name = "created_at") val createdAt: Long = System.currentTimeMillis()
 )

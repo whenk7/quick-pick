@@ -368,4 +368,23 @@ class PackageRepositoryTest {
         repo.deleteById(id)
         assertEquals(0, dao.store.size)
     }
+
+    // ---- mergedSmsIds 累积（v1.1.8 终审修复：删除时全忽略，防重扫复活）----
+
+    @Test
+    fun `merge accumulates replaced sms ids`() = runBlocking {
+        // 无单号同码归并：旧短信 id 进 mergedSmsIds
+        val (repo, dao) = newRepo()
+        repo.insertFromSms(rec(day = 13, smsId = "first", code = "8888", address = "驿站"))
+        repo.insertFromSms(rec(day = 14, smsId = "second", code = "8888", address = "驿站"))
+        assertEquals(1, dao.store.size, "同码归并仍是一条")
+        val e = dao.store[0]
+        assertEquals("second", e.smsId, "新短信顶替为记录来源")
+        assertEquals("[\"first\"]", e.mergedSmsIds, "被顶掉的旧短信 id 收进 merged")
+        // 第三次推送：继续累积
+        repo.insertFromSms(rec(day = 15, smsId = "third", code = "8888", address = "驿站"))
+        assertEquals(1, dao.store.size)
+        val ids = PackageRepository.decodeMerged(dao.store[0].mergedSmsIds)
+        assertEquals(listOf("first", "second"), ids)
+    }
 }

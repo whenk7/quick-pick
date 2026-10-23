@@ -74,13 +74,20 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
     }
 }
 
+/** v3→v4：package_records 加 merged_sms_ids（归并被顶掉的旧短信 id，删除记录时全忽略）。纯加列带默认值 */
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE package_records ADD COLUMN merged_sms_ids TEXT NOT NULL DEFAULT '[]'")
+    }
+}
+
 @Database(
     entities = [
         MatchRuleEntity::class,
         PackageRecordEntity::class,
         ScannedSmsEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -99,7 +106,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "quickpick.db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)   // 不加 fallbackToDestructiveMigration：迁移失败就崩，比静默丢数据安全
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)   // 不加 fallbackToDestructiveMigration：迁移失败就崩，比静默丢数据安全
                     .build()
                 INSTANCE = instance
                 instance
