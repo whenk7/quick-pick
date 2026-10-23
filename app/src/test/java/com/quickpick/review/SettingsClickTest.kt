@@ -37,7 +37,7 @@ class SettingsClickTest {
     @Test
     fun `scan window spinner opens on click`() {
         composeRule.setContent {
-            QuickPickTheme { SettingsScreen(settingsVm(), {}, {}) }
+            QuickPickTheme { SettingsScreen(settingsVm()) {} }
         }
         composeRule.onNodeWithText("扫描范围").performClick()
         composeRule.waitForIdle()

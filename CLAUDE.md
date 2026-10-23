@@ -101,7 +101,9 @@ UI：v1.1.0 起 M3 全面迁移到 miuix 0.9.4（ui+blur），app/src 零 materi
 - ✅ 全分支终审（opus）：0 Critical / 2 Important / 7 Minor，Review Focus 5 项全过。Important 均为跨层缺陷：老记录 sms_thread_id 不随重扫回填（升级用户「查看短信」隐形）、TokenChip 命中态暗色下不可读
 - ✅ v1.1.1 修复发布（versionCode 3，两处 Important）
 - ✅ v1.1.2（versionCode 4）：引擎 E1（suffix 未命中判 null）+ 无单号重复/催取归并 + 主题系统重做（双引擎/主题页/玻璃调参/豆绿清洗）+ JVM 测试基建（45 例 + Roborazzi 渲染审查）
-- ⬜ 真机验收（清单见下一步；主题页/Monet/玻璃滑杆重点过目）
+- ✅ v1.1.3（versionCode 5）：设置页点击闪退修复（miuix 弹层缺 NavigationEventDispatcherOwner，主题根部 provide）+ 不混淆裁决（-dontobfuscate，3.19MB→3.70MB 换可读栈）
+- ✅ v1.1.4（versionCode 6）：预置规则极简重置（顺丰/京东只留取件码+品牌，preset_v3 覆盖升级）+ 规则工坊（规则页横排三按钮：导入弹窗粘贴/文件双通道、导出复制/存文件、AI 生成页重写——短信样本审查+手动补齐+提示词一键复制+直接粘贴入库）+ 设置页规则相关入口移除
+- ⬜ 真机验收（清单见下一步；规则工坊全流程 + 主题页重点过目）
 
 ## 执行模式（已和用户商定）
 

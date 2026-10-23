@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.quickpick.data.preset.PresetFlags
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -14,12 +15,13 @@ import kotlinx.coroutines.flow.map
 private val Context.dataStore by preferencesDataStore(name = "quickpick_prefs")
 
 /** 轻量偏好存储：权限引导完成标记、预置规则灌入标记、扫描窗口、主题与玻璃底栏偏好 */
-class SettingsStore(private val context: Context) {
+class SettingsStore(private val context: Context) : PresetFlags {
 
     companion object {
         private val KEY_ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
         private val KEY_RULES_SEEDED = booleanPreferencesKey("rules_seeded")
         private val KEY_PRESET_V2_SEEDED = booleanPreferencesKey("preset_v2_seeded")
+        private val KEY_PRESET_V3_SEEDED = booleanPreferencesKey("preset_v3_seeded")
         private val KEY_SCAN_WINDOW_DAYS = intPreferencesKey("scan_window_days")
 
         // 主题（2026-10-22 重做；老键 color_mode/use_monet 弃用不迁移）
@@ -46,18 +48,25 @@ class SettingsStore(private val context: Context) {
         context.dataStore.edit { it[KEY_ONBOARDING_DONE] = true }
     }
 
-    suspend fun isRulesSeeded(): Boolean =
+    override suspend fun isRulesSeeded(): Boolean =
         context.dataStore.data.map { it[KEY_RULES_SEEDED] ?: false }.first()
 
-    suspend fun setRulesSeeded() {
+    override suspend fun setRulesSeeded() {
         context.dataStore.edit { it[KEY_RULES_SEEDED] = true }
     }
 
-    suspend fun isPresetV2Seeded(): Boolean =
+    override suspend fun isPresetV2Seeded(): Boolean =
         context.dataStore.data.map { it[KEY_PRESET_V2_SEEDED] ?: false }.first()
 
-    suspend fun setPresetV2Seeded() {
+    override suspend fun setPresetV2Seeded() {
         context.dataStore.edit { it[KEY_PRESET_V2_SEEDED] = true }
+    }
+
+    override suspend fun isPresetV3Seeded(): Boolean =
+        context.dataStore.data.map { it[KEY_PRESET_V3_SEEDED] ?: false }.first()
+
+    override suspend fun setPresetV3Seeded() {
+        context.dataStore.edit { it[KEY_PRESET_V3_SEEDED] = true }
     }
 
     /** 扫描时间窗口（天） */

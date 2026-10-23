@@ -112,18 +112,9 @@ fun AppNavigation() {
 
             composable(Screen.AiPrompt.route) {
                 val viewModel: AiPromptViewModel = viewModel()
+                // v1.1.4：AI 页内直接粘贴入库，不再借道编辑器
                 AiPromptScreen(
                     viewModel = viewModel,
-                    onImportRule = { json, smsText ->
-                        navController.navigate(Screen.RuleEditor.createRoute(0L))
-                        // navigate 之后 currentBackStackEntry 即编辑器页，写入它的 savedStateHandle
-                        navController.currentBackStackEntry
-                            ?.savedStateHandle
-                            ?.set("importedJson", json)
-                        navController.currentBackStackEntry
-                            ?.savedStateHandle
-                            ?.set("importedSms", smsText)
-                    },
                     onBack = { navController.popBackStack() }
                 )
             }
@@ -209,13 +200,13 @@ fun MainScreen(
                                 putExtra(Intent.EXTRA_TEXT, json)
                             }
                             context.startActivity(Intent.createChooser(intent, "分享规则"))
-                        }
+                        },
+                        onOpenAi = onNavigateToAi
                     )
                 }
                 BottomTab.SETTINGS -> {
                     SettingsScreen(
                         settingsViewModel = settingsViewModel,
-                        onOpenAiPrompt = onNavigateToAi,
                         onOpenTheme = onNavigateToTheme
                     )
                 }

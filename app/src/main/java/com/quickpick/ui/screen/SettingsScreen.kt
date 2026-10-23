@@ -4,8 +4,6 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -17,11 +15,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quickpick.BuildConfig
-import com.quickpick.ui.component.ConfirmDialog
 import com.quickpick.ui.component.glass.glassNavBarClearance
 import com.quickpick.ui.theme.*
 import com.quickpick.ui.viewmodel.SettingsViewModel
-import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.DropdownItem
@@ -37,33 +33,10 @@ private val SCAN_WINDOW_LABELS = listOf(7 to "一周", 30 to "一月", 90 to "�
 @Composable
 fun SettingsScreen(
     settingsViewModel: SettingsViewModel,
-    onOpenAiPrompt: () -> Unit,
     onOpenTheme: () -> Unit
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val conflict by settingsViewModel.conflict.collectAsStateWithLifecycle()
     val scanWindowDays by settingsViewModel.scanWindowDays.collectAsStateWithLifecycle()
-
-    LaunchedEffect(Unit) {
-        settingsViewModel.events.collect { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
-    }
-
-    // 导入规则：系统文件选择器（spec 七）
-    val importLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            val text = runCatching {
-                context.contentResolver.openInputStream(uri)?.use { it.readBytes().decodeToString() }
-            }.getOrNull()
-            if (text != null) {
-                settingsViewModel.importRules(text)
-            } else {
-                Toast.makeText(context, "没能读取这个文件，换一个试试～", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
 
     Column(
         modifier = Modifier
@@ -112,32 +85,6 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 快捷操作（「全部已取」入口在列表页，带二次确认；按天已取在各分组标题右侧）
-        SectionTitle("快捷操作")
-        SettingsRow("🤖 AI 生成规则", onClick = onOpenAiPrompt)
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 规则管理
-        SectionTitle("规则管理")
-        SettingsRow("📤 导出全部规则", onClick = {
-            // 导出走系统分享面板（本地 ACTION_SEND，不涉及任何网络）
-            scope.launch {
-                val json = settingsViewModel.exportAllJson()
-                if (json != null) {
-                    val intent = Intent(Intent.ACTION_SEND).apply {
-                        type = "application/json"
-                        putExtra(Intent.EXTRA_TEXT, json)
-                    }
-                    context.startActivity(Intent.createChooser(intent, "导出规则"))
-                }
-            }
-        })
-        // MIME 用 */*：部分国产 ROM 文件管理器不认 application/json 会选不到文件
-        SettingsRow("📥 导入规则", onClick = { importLauncher.launch("*/*") })
-
-        Spacer(modifier = Modifier.height(16.dp))
-
         // 关于
         SectionTitle("关于")
         SettingsRow("版本号", subtitle = BuildConfig.VERSION_NAME, onClick = {})
@@ -176,21 +123,6 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(80.dp))
     }
-
-    // 导入同名冲突：逐条裁决 覆盖/跳过（edge-cases 四）
-    // 常驻组合 + visible 参数：退出动画由 OverlayDialog 的 show 状态驱动，条件组合会跳过它。
-    // 记住最近的冲突名：conflict 置 null 后的退场动画期间文案不闪空
-    var lastConflictName by remember { mutableStateOf("") }
-    conflict?.let { lastConflictName = it.incoming.name }
-    ConfirmDialog(
-        visible = conflict != null,
-        title = "发现同名规则",
-        message = "已存在「$lastConflictName」，要覆盖它吗？",
-        confirmText = "覆盖",
-        dismissText = "跳过",
-        onConfirm = { settingsViewModel.resolveConflict(true) },
-        onDismiss = { settingsViewModel.resolveConflict(false) }
-    )
 }
 
 @Composable
