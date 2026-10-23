@@ -161,8 +161,8 @@ fun RuleEditorScreen(
                     TextField(
                         value = state.ruleName,
                         onValueChange = { viewModel.updateRuleName(it) },
-                        // 这个输入的是「这条规则叫什么名字」，会显示在快递卡片标题上（如：顺丰速运）
-                        label = "名称（显示在快递卡片标题）",
+                        // v1.1.7 §5：规则名纯记忆用（管理列表显示），不进快递卡片
+                        label = "规则名称",
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         colors = InputFieldColors

@@ -114,7 +114,8 @@ class PackageListViewModel(
                         val (rule, fields) = result
                         packageRepo.insertFromSms(
                             PackageRecord(
-                                companyName = fields.brandName ?: rule.name,
+                                // v1.1.7 §5：规则名纯记忆用不进卡片；品牌提取失败显示「快递」
+                                companyName = fields.brandName ?: "快递",
                                 trackingNumber = fields.trackingNumber,
                                 pickupCode = fields.pickupCode,
                                 address = fields.address,
