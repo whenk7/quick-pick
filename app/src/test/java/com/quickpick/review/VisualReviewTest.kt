@@ -88,8 +88,8 @@ class VisualReviewTest {
                 dateLabel = "今天", dateMs = 0L, collapsed = false,
                 hasUnpicked = true, onToggleCollapse = {}, onMarkDayPickedUp = {}
             )
-            PackageCard(record = sampleUnpicked, onTogglePickedUp = {}, onCopyField = {})
-            PackageCard(record = samplePicked, onTogglePickedUp = {}, onCopyField = {})
+            PackageCard(record = sampleUnpicked, onTogglePickedUp = {})
+            PackageCard(record = samplePicked, onTogglePickedUp = {})
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TokenChip(text = "取件码", state = TokenState.NORMAL, onClick = {})
                 TokenChip(text = "44651320", state = TokenState.MATCHED, onClick = {})

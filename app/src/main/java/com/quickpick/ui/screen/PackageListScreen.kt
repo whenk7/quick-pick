@@ -238,8 +238,7 @@ fun PackageListScreen(
                                     DayGroupContent(
                                         packages = pkgs,
                                         collapsed = dateMs in collapsedDays,
-                                        onTogglePickedUp = { viewModel.togglePickedUp(it) },
-                                        onCopyField = { copyToClipboard(context, it) }
+                                        onTogglePickedUp = { viewModel.togglePickedUp(it) }
                                     )
                                 }
                             }
@@ -249,12 +248,6 @@ fun PackageListScreen(
             }
         }
     }
-}
-
-private fun copyToClipboard(context: Context, text: String) {
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    clipboard.setPrimaryClip(ClipData.newPlainText("", text))
-    Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
 }
 
 /** 时间戳归一到本地当天 00:00:00 用于分组（与 DAO 的 'localtime' 日界一致） */

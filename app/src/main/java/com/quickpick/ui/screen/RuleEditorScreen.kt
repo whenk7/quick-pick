@@ -227,7 +227,8 @@ fun RuleEditorScreen(
                     item {
                         PackageCard(
                             record = PackageRecord(
-                                companyName = state.ruleName.ifEmpty { "预览" },
+                                // v1.1.7 §5：卡片标题=品牌提取值，提不到显示「快递」（不再用规则名）
+                                companyName = preview.brandName ?: "快递",
                                 trackingNumber = preview.trackingNumber,
                                 pickupCode = preview.pickupCode,
                                 address = preview.address,
@@ -235,8 +236,7 @@ fun RuleEditorScreen(
                                 smsBody = state.smsText,
                                 smsTimestamp = System.currentTimeMillis()
                             ),
-                            onTogglePickedUp = {},
-                            onCopyField = {}
+                            onTogglePickedUp = {}
                         )
                     }
                 }
