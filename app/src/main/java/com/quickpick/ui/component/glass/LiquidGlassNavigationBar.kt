@@ -8,6 +8,12 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +40,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -108,6 +115,8 @@ fun LiquidGlassNavigationBar(
     backdrop: LayerBackdrop,
     modifier: Modifier = Modifier,
     tuning: GlassTuning = GlassTuning(),
+    // 长按 tab（v1.1.7 §11 沉浸模式入口）：按下不动触发，按下即动归 DampedDrag 正常切换
+    onTabLongClick: ((BottomTab) -> Unit)? = null,
 ) {
     val items = BottomTab.entries
     val selectedIndex = currentTab.ordinal
@@ -159,6 +168,12 @@ fun LiquidGlassNavigationBar(
             .coerceIn(0, tabsCount - 1)
     }
 
+    // 长按检测（v1.1.7 §11）：挂在 DampedDrag 的回调钩子上，零事件侵入——
+    // 自研 pointerInput 方案在 Initial pass 旁观也会掐死 DampedDrag 点击（压测实证）。
+    // 按下起 longPressTimeout 计时；移动（onDrag）或抬起（onDragStopped/Cancelled）取消
+    val longPressTimeout = androidx.compose.ui.platform.LocalViewConfiguration.current.longPressTimeoutMillis
+    var longPressJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+
     val dampedDrag = remember(animationScope, tabsCount, density, isLtr) {
         DampedDragAnimation(
             animationScope = animationScope,
@@ -172,8 +187,14 @@ fun LiquidGlassNavigationBar(
             },
             onDragStarted = { position ->
                 updateValue(indexAt(position.x).toFloat())
+                longPressJob?.cancel()
+                longPressJob = animationScope.launch {
+                    kotlinx.coroutines.delay(longPressTimeout)
+                    onTabLongClick?.invoke(items[indexAt(position.x)])
+                }
             },
             onDragStopped = {
+                longPressJob?.cancel()
                 val targetIndex = targetValue.roundToInt().coerceIn(0, tabsCount - 1)
                 if (currentIndex != targetIndex) {
                     currentIndex = targetIndex
@@ -185,12 +206,16 @@ fun LiquidGlassNavigationBar(
                 }
             },
             onDragCancelled = {
+                longPressJob?.cancel()
                 updateValue(currentIndex.toFloat())
                 animationScope.launch {
                     offsetAnimation.animateTo(0f, spring(1f, 300f, 0.5f))
                 }
             },
             onDrag = { _, dragAmount ->
+                // 注意：inspectDragGestures 按下后立即回调一次 onDrag(Offset.Zero)，
+                // 无条件取消会把刚启动的长按计时器掐死——只在真实拖动时取消
+                if (dragAmount != androidx.compose.ui.geometry.Offset.Zero) longPressJob?.cancel()
                 if (tabWidthPx > 0f && dragAmount.x != 0f) {
                     updateValue(
                         (targetValue + dragAmount.x / tabWidthPx * if (isLtr) 1f else -1f)

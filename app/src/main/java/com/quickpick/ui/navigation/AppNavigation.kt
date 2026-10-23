@@ -6,10 +6,12 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -28,6 +30,7 @@ import com.quickpick.ui.theme.Background
 import com.quickpick.ui.viewmodel.*
 import com.quickpick.util.JsonExporter
 import com.quickpick.util.UiNotifier
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SnackbarDuration
@@ -160,8 +163,16 @@ fun MainScreen(
     val ruleListViewModel: RuleListViewModel = viewModel()
     val settingsViewModel: SettingsViewModel = viewModel()
     val context = LocalContext.current
+    val app = context.applicationContext as QuickPickApp
 
     var currentTab by remember { mutableStateOf(BottomTab.PACKAGES) }
+    val scope = rememberCoroutineScope()
+
+    // 沉浸式取件模式（v1.1.7 §11）：独立状态，切 tab 不退出；
+    // 退出仅三条：长按快递 / 返回键（沉浸前台时）/ 全部取完
+    var immersionMode by rememberSaveable { mutableStateOf(false) }
+    var showImmersionGuide by remember { mutableStateOf(false) }
+    val packages by packageViewModel.packages.collectAsStateWithLifecycle()
 
     // 玻璃底栏四旋钮（主题与外观页调节，全局即时生效）
     val glassBlur by settingsViewModel.glassBlur.collectAsStateWithLifecycle()
@@ -176,6 +187,11 @@ fun MainScreen(
     val activity = context as? Activity
     var lastBackAt by remember { mutableLongStateOf(0L) }
     BackHandler {
+        // 沉浸视图在快递 tab 前台时：返回 = 退出沉浸（优先于双击退出）
+        if (immersionMode && currentTab == BottomTab.PACKAGES) {
+            immersionMode = false
+            return@BackHandler
+        }
         val now = System.currentTimeMillis()
         if (now - lastBackAt < 2000) {
             activity?.finish()
@@ -195,6 +211,22 @@ fun MainScreen(
             LiquidGlassNavigationBar(
                 currentTab = currentTab,
                 onTabClick = { currentTab = it },
+                onTabLongClick = { tab ->
+                    if (tab == BottomTab.PACKAGES) {
+                        if (!immersionMode) {
+                            // 进入：首次先弹引导（一次性），引导浮在沉浸视图上
+                            scope.launch {
+                                if (!app.settingsStore.immersionGuideShown.first()) {
+                                    showImmersionGuide = true
+                                }
+                            }
+                            currentTab = BottomTab.PACKAGES
+                            immersionMode = true
+                        } else {
+                            immersionMode = false
+                        }
+                    }
+                },
                 backdrop = backdrop,
                 tuning = GlassTuning(
                     blur = glassBlur,
@@ -216,14 +248,24 @@ fun MainScreen(
                     end = padding.calculateEndPadding(LocalLayoutDirection.current)
                 )
         ) {
-            when (currentTab) {
-                BottomTab.PACKAGES -> {
+            when {
+                // 沉浸模式：快递 tab + 沉浸态 → 沉浸视图（tab 切换不退出沉浸）
+                currentTab == BottomTab.PACKAGES && immersionMode -> {
+                    ImmersionScreen(
+                        packages = packages.filter { !it.isPickedUp },
+                        onMarkAllPicked = {
+                            packageViewModel.markAllPickedUp()
+                            immersionMode = false
+                        }
+                    )
+                }
+                currentTab == BottomTab.PACKAGES -> {
                     PackageListScreen(
                         viewModel = packageViewModel,
                         onGoToRules = { currentTab = BottomTab.RULES }
                     )
                 }
-                BottomTab.RULES -> {
+                currentTab == BottomTab.RULES -> {
                     RuleListScreen(
                         viewModel = ruleListViewModel,
                         onAddRule = { onNavigateToEditor(0L) },
@@ -240,7 +282,7 @@ fun MainScreen(
                         onOpenAi = onNavigateToAi
                     )
                 }
-                BottomTab.SETTINGS -> {
+                else -> {
                     SettingsScreen(
                         settingsViewModel = settingsViewModel,
                         onOpenTheme = onNavigateToTheme,
@@ -248,6 +290,26 @@ fun MainScreen(
                     )
                 }
             }
+        }
+    }
+
+    // 沉浸模式首次引导（v1.1.7 §11 用户裁决）：不自动关闭、返回键吞掉、只能点按钮
+    BackHandler(enabled = showImmersionGuide) { /* 吞掉：引导必须手动关闭 */ }
+    top.yukonga.miuix.kmp.overlay.OverlayDialog(
+        show = showImmersionGuide,
+        title = "沉浸式取件模式",
+        summary = "站在货架前用：大字显示全部待取件码，按位置分组。\n\n进入：长按底栏「快递」\n退出：再长按「快递」，或按返回键",
+        onDismissRequest = {}  // 点外部也不关
+    ) {
+        top.yukonga.miuix.kmp.basic.Button(
+            onClick = {
+                showImmersionGuide = false
+                scope.launch { app.settingsStore.setImmersionGuideShown() }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.buttonColorsPrimary()
+        ) {
+            top.yukonga.miuix.kmp.basic.Text("我知道了", color = androidx.compose.ui.graphics.Color.White)
         }
     }
 }
