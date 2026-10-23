@@ -40,7 +40,11 @@ class PackageListViewModel(
     private val ruleRepo = RuleRepository(db.matchRuleDao())
     private val smsRepo = SmsRepository(db.scannedSmsDao())
 
+    // v1.1.7 §6：显示层应用地址别名（不动库存数据；改别名即时生效无需重扫）
     val packages: StateFlow<List<PackageRecord>> = packageRepo.observeAll()
+        .combine(settingsStore.addressAliases) { list, aliases ->
+            list.map { it.copy(address = com.quickpick.domain.model.applyAddressAlias(it.address, aliases)) }
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val unpickedCount: StateFlow<Int> = packageRepo.observeUnpickedCount()
@@ -49,6 +53,10 @@ class PackageListViewModel(
     val ruleCount: StateFlow<Int> = ruleRepo.observeAll()
         .map { it.size }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    /** 扫描窗口天数（首页副标题「· 近三月」用，v1.1.7 §8） */
+    val scanWindowDays: StateFlow<Int> = settingsStore.scanWindowDays
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 7)
 
     private val _scannedCount = MutableStateFlow(0)
     val scannedCount: StateFlow<Int> = _scannedCount
@@ -77,7 +85,12 @@ class PackageListViewModel(
         if (granted) scanSms()
     }
 
-    fun scanSms() {
+    /**
+     * @param removeUnmatched 全量重扫语义（v1.1.5 用户裁决）：短信当前规则匹配不上时，
+     *   移除其对应的未取件失效记录。仅手动下拉（clearScanned 全量重扫）传 true；
+     *   增量扫描（新短信到达/权限恢复）不动存量记录。
+     */
+    fun scanSms(removeUnmatched: Boolean = false) {
         if (_isScanning.value) return
         viewModelScope.launch {
             _isScanning.value = true
@@ -96,7 +109,11 @@ class PackageListViewModel(
                 _scannedCount.value = smsRepo.scannedCount()
 
                 val rules = ruleRepo.getAll()
-                if (rules.isEmpty()) return@launch
+                if (rules.isEmpty()) {
+                    // 无规则 = 一切不匹配（v1.1.7）：手动重扫清空未取件；增量扫描不动存量
+                    if (removeUnmatched) packageRepo.deleteAllUnpicked()
+                    return@launch
+                }
 
                 messages.forEach { sms ->
                     if (smsRepo.isScanned(sms.id)) return@forEach
@@ -105,7 +122,8 @@ class PackageListViewModel(
                         val (rule, fields) = result
                         packageRepo.insertFromSms(
                             PackageRecord(
-                                companyName = fields.brandName ?: rule.name,
+                                // v1.1.7 §5：规则名纯记忆用不进卡片；品牌提取失败显示「快递」
+                                companyName = fields.brandName ?: "快递",
                                 trackingNumber = fields.trackingNumber,
                                 pickupCode = fields.pickupCode,
                                 address = fields.address,
@@ -114,9 +132,13 @@ class PackageListViewModel(
                                 smsTimestamp = sms.timestamp,
                                 ruleId = rule.id,
                                 smsId = sms.id,
-                                smsThreadId = sms.threadId
+                                smsThreadId = sms.threadId,
+                                smsSender = sms.address
                             )
                         )
+                    }
+                    if (result == null && removeUnmatched) {
+                        packageRepo.deleteUnpickedBySmsId(sms.id)
                     }
                     smsRepo.markScanned(sms.id)
                 }
@@ -140,7 +162,7 @@ class PackageListViewModel(
             // 下次扫描会把在途那轮已处理的短信再处理一遍
             if (_isScanning.value) return@launch
             smsRepo.clearScanned()
-            scanSms()
+            scanSms(removeUnmatched = true)
         }
     }
 

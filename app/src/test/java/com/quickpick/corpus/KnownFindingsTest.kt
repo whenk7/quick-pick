@@ -17,20 +17,11 @@ class KnownFindingsTest {
     private val rules = TestRules.allWithPresets
 
     // ---- F1：预置顺丰 addressPrefix「到达」过松，营销短信可误报入库 ----
-    // 修法：预置锚点收紧「已到达」+ preset_v3 升级路径。语料无顺丰/京东实样，
-    // 不拿合成对抗样本盲调生产锚点 → v1.1.2 候选。
+    // 已修（2026-10-23 preset_v3 极简重置）：顺丰/京东预置不再有地址锚点，F1 根除。
+    // 期望态转正为常驻回归守护（原「现状复现」测试按设计随修复删除）。
 
     @Test
-    fun `F1 currently reproduces - marketing sms with arrival keyword is recorded`() {
-        val v = KNOWN_FAILURES.first { it.id == "V03" }
-        val result = MatchEngine.findBestMatch(v.text, rules)
-        assertEquals("顺丰速运", result?.first?.name)
-        assertEquals("提醒服务已开通", result?.second?.address)   // 垃圾地址入库
-    }
-
-    @Test
-    @Ignore("F1 未修：预置顺丰锚点「到达」过松，v1.1.2 收紧为「已到达」+ preset_v3")
-    fun `F1 marketing sms with arrival keyword must not be recorded`() {
+    fun `F1 fixed - marketing sms with arrival keyword must not be recorded`() {
         val v = KNOWN_FAILURES.first { it.id == "V03" }
         assertNull(MatchEngine.findBestMatch(v.text, rules))
     }

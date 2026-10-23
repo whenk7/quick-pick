@@ -6,12 +6,15 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -23,7 +26,9 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quickpick.ui.theme.Background
+import com.quickpick.ui.theme.Primary
 import com.quickpick.ui.theme.TextPrimary
+import com.quickpick.ui.theme.TextTertiary
 import com.quickpick.ui.theme.effectiveSpec
 import com.quickpick.ui.theme.supportedSpecs
 import com.quickpick.ui.viewmodel.SettingsViewModel
@@ -41,7 +46,6 @@ import top.yukonga.miuix.kmp.theme.ThemeColorSpec
 import top.yukonga.miuix.kmp.theme.ThemePaletteStyle
 
 private val THEME_MODES = listOf("SYSTEM" to "跟随系统", "LIGHT" to "浅色", "DARK" to "深色")
-private val THEME_ENGINES = listOf("FIXED" to "固定配色", "MONET" to "动态配色（Monet）")
 private val STYLE_LABELS = listOf(
     "TonalSpot" to "标准",
     "Neutral" to "中性",
@@ -59,7 +63,6 @@ private val SPEC_LABELS = listOf("Spec2021" to "Material 2021", "Spec2025" to "E
 @Composable
 fun ThemeSettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
-    val themeEngine by viewModel.themeEngine.collectAsStateWithLifecycle()
     val dynamicColor by viewModel.dynamicColor.collectAsStateWithLifecycle()
     val seedColor by viewModel.seedColor.collectAsStateWithLifecycle()
     val paletteStyle by viewModel.paletteStyle.collectAsStateWithLifecycle()
@@ -122,62 +125,72 @@ fun ThemeSettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                 cornerRadius = 16.dp
             ) {
-                OverlaySpinnerPreference(
-                    title = "配色引擎",
-                    summary = if (themeEngine == "MONET") "由种子色/壁纸生成整套配色" else "miuix 内置配色",
-                    items = THEME_ENGINES.map { DropdownItem(title = it.second) },
-                    selectedIndex = THEME_ENGINES.indexOfFirst { it.first == themeEngine }.coerceAtLeast(0),
-                    onSelectedIndexChange = { viewModel.setThemeEngine(THEME_ENGINES[it].first) }
+                // v1.1.7 §7 砍引擎：动态取色开关 + 默认/种子色 + 风格 + 规格
+                SwitchPreference(
+                    title = "动态取色",
+                    summary = if (monetSupported) "从系统壁纸取色" else "需要 Android 12 及以上",
+                    checked = dynamicColor && monetSupported,
+                    enabled = monetSupported,
+                    onCheckedChange = { viewModel.setDynamicColor(it) }
                 )
                 AnimatedVisibility(
-                    visible = themeEngine == "MONET",
+                    visible = !dynamicColor || !monetSupported,
                     enter = fadeIn() + expandVertically(),
                     exit = fadeOut() + shrinkVertically()
                 ) {
                     Column {
-                        SwitchPreference(
-                            title = "动态取色",
-                            summary = if (monetSupported) "从系统壁纸取色" else "需要 Android 12 及以上",
-                            checked = dynamicColor && monetSupported,
-                            enabled = monetSupported,
-                            onCheckedChange = { viewModel.setDynamicColor(it) }
-                        )
-                        AnimatedVisibility(visible = !dynamicColor || !monetSupported) {
-                            Column {
-                                Text(
-                                    text = "种子色",
-                                    style = MiuixTheme.textStyles.main,
-                                    color = TextPrimary,
-                                    modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
-                                )
-                                top.yukonga.miuix.kmp.basic.ColorPalette(
-                                    color = Color(seedColor),
-                                    onColorChanged = { viewModel.setSeedColor(it.toArgb()) },
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                                )
-                            }
+                        // 「默认」选项行：miuix 内置板（seedColor == null）
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.setSeedColor(null) }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (seedColor == null) "●" else "○",
+                                style = MiuixTheme.textStyles.body1,
+                                color = if (seedColor == null) Primary else TextTertiary
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "默认（miuix 内置配色）",
+                                style = MiuixTheme.textStyles.main,
+                                color = TextPrimary
+                            )
                         }
-                        OverlaySpinnerPreference(
-                            title = "调色板风格",
-                            items = STYLE_LABELS.map { DropdownItem(title = it.second) },
-                            selectedIndex = STYLE_LABELS.indexOfFirst { it.first == paletteStyle }.coerceAtLeast(0),
-                            onSelectedIndexChange = { viewModel.setPaletteStyle(STYLE_LABELS[it].first) }
+                        Text(
+                            text = "种子色",
+                            style = MiuixTheme.textStyles.main,
+                            color = TextPrimary,
+                            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
                         )
-                        OverlaySpinnerPreference(
-                            title = "色彩规格",
-                            // 偏好与生效值分离：风格不支持所选规格时生效值回退，不改写用户选择
-                            summary = if (supportedSpecs.size > 1) {
-                                "配色规格版本"
-                            } else {
-                                "「${STYLE_LABELS.first { it.first == currentStyle.name }.second}」风格仅支持 Material 2021，已按 2021 生效"
-                            },
-                            items = SPEC_LABELS.map { DropdownItem(title = it.second) },
-                            selectedIndex = SPEC_LABELS.indexOfFirst { it.first == colorSpec }.coerceAtLeast(0),
-                            enabled = supportedSpecs.size > 1,
-                            onSelectedIndexChange = { viewModel.setColorSpec(SPEC_LABELS[it].first) }
+                        top.yukonga.miuix.kmp.basic.ColorPalette(
+                            color = seedColor?.let { Color(it) } ?: Color(0xFF3482FF),
+                            onColorChanged = { viewModel.setSeedColor(it.toArgb()) },
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                         )
                     }
                 }
+                OverlaySpinnerPreference(
+                    title = "调色板风格",
+                    items = STYLE_LABELS.map { DropdownItem(title = it.second) },
+                    selectedIndex = STYLE_LABELS.indexOfFirst { it.first == paletteStyle }.coerceAtLeast(0),
+                    onSelectedIndexChange = { viewModel.setPaletteStyle(STYLE_LABELS[it].first) }
+                )
+                OverlaySpinnerPreference(
+                    title = "色彩规格",
+                    // 偏好与生效值分离：风格不支持所选规格时生效值回退，不改写用户选择
+                    summary = if (supportedSpecs.size > 1) {
+                        "配色规格版本"
+                    } else {
+                        "「${STYLE_LABELS.first { it.first == currentStyle.name }.second}」风格仅支持 Material 2021，已按 2021 生效"
+                    },
+                    items = SPEC_LABELS.map { DropdownItem(title = it.second) },
+                    selectedIndex = SPEC_LABELS.indexOfFirst { it.first == colorSpec }.coerceAtLeast(0),
+                    enabled = supportedSpecs.size > 1,
+                    onSelectedIndexChange = { viewModel.setColorSpec(SPEC_LABELS[it].first) }
+                )
             }
 
             SmallTitle(text = "玻璃底栏")

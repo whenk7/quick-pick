@@ -67,6 +67,16 @@ class PackageRepositoryTest {
         override suspend fun markDayPickedUp(dateMs: Long) {
             store.replaceAll { if (sameDay(it.smsTimestamp, dateMs)) it.copy(isPickedUp = true) else it }
         }
+
+        override suspend fun deleteUnpickedBySmsId(smsId: String): Int {
+            val before = store.size
+            store.removeAll { it.smsId == smsId && !it.isPickedUp }
+            return before - store.size
+        }
+
+        override suspend fun deleteAllUnpicked() {
+            store.removeAll { !it.isPickedUp }
+        }
     }
 
     private fun ts(day: Int, hour: Int = 12): Long =
@@ -81,11 +91,12 @@ class PackageRepositoryTest {
         day: Int = 13,
         hour: Int = 12,
         smsId: String? = null,
-        threadId: Long? = null
+        threadId: Long? = null,
+        sender: String? = null
     ) = PackageRecord(
         companyName = company, trackingNumber = tracking, pickupCode = code,
         address = address, smsBody = body, smsTimestamp = ts(day, hour),
-        smsId = smsId, smsThreadId = threadId
+        smsId = smsId, smsThreadId = threadId, smsSender = sender
     )
 
     private fun newRepo(): Pair<PackageRepository, FakeDao> {
@@ -111,6 +122,17 @@ class PackageRepositoryTest {
         repo.insertFromSms(rec(day = 13, smsId = "s1", threadId = 555L))
         assertEquals(1, dao.store.size)
         assertEquals(555L, dao.store[0].smsThreadId)
+    }
+
+    @Test
+    fun `same smsId backfills smsSender on rescan`() = runBlocking {
+        // v3 老记录 sender 为 NULL，重扫回填（短信原文弹窗的发件人）
+        val (repo, dao) = newRepo()
+        repo.insertFromSms(rec(day = 13, smsId = "s1", threadId = null))
+        dao.store[0] = dao.store[0].copy(smsSender = null)   // 模拟 v2 老记录
+        repo.insertFromSms(rec(day = 13, smsId = "s1", threadId = 555L, sender = "10684110405676900"))
+        assertEquals(1, dao.store.size)
+        assertEquals("10684110405676900", dao.store[0].smsSender)
     }
 
     @Test
@@ -257,5 +279,58 @@ class PackageRepositoryTest {
         repo.insertFromSms(scan(corpus("E030"), 25, "sms-e030"))
         assertEquals(1, dao.store.size, "菜鸟同码重复推送应归并")
         assertEquals(ts(25), dao.store[0].smsTimestamp)
+    }
+
+    // ---- 全量重扫移除失效记录（v1.1.5 用户裁决：规则不匹配即移除，不保留无效取件信息）----
+
+    @Test
+    fun `unmatched unpicked record is removed on refresh`() = runBlocking {
+        val (repo, dao) = newRepo()
+        repo.insertFromSms(rec(day = 13, smsId = "gone-rule"))
+        repo.deleteUnpickedBySmsId("gone-rule")
+        assertEquals(0, dao.store.size, "规则不再匹配的未取件记录应被移除")
+    }
+
+    @Test
+    fun `unmatched picked record survives refresh`() = runBlocking {
+        // 已取件的是历史记录，不是「待办信息」——保留置灰
+        val (repo, dao) = newRepo()
+        repo.insertFromSms(rec(day = 13, smsId = "gone-rule"))
+        dao.updatePickedUp(dao.store[0].id, true)
+        repo.deleteUnpickedBySmsId("gone-rule")
+        assertEquals(1, dao.store.size, "已取件历史不随规则失效移除")
+        assertTrue(dao.store[0].isPickedUp)
+    }
+
+    @Test
+    fun `unrelated records untouched by removal`() = runBlocking {
+        val (repo, dao) = newRepo()
+        repo.insertFromSms(rec(day = 13, smsId = "keep", code = "1111"))
+        repo.insertFromSms(rec(day = 14, smsId = "gone", code = "2222"))
+        repo.deleteUnpickedBySmsId("gone")
+        assertEquals(1, dao.store.size)
+        assertEquals("1111", dao.store[0].pickupCode)
+    }
+
+    // ---- 删光规则后的全量重扫（v1.1.7 §1.1：无规则 = 一切不匹配，未取件清空）----
+
+    @Test
+    fun `deleteAllUnpicked removes only unpicked records`() = runBlocking {
+        val (repo, dao) = newRepo()
+        repo.insertFromSms(rec(day = 13, smsId = "a", code = "1111"))
+        repo.insertFromSms(rec(day = 14, smsId = "b", code = "2222"))
+        repo.insertFromSms(rec(day = 15, smsId = "c", code = "3333"))
+        dao.updatePickedUp(dao.store.first { it.smsId == "b" }.id, true)
+        repo.deleteAllUnpicked()
+        assertEquals(1, dao.store.size, "未取件全删，已取件历史保留")
+        assertTrue(dao.store[0].isPickedUp)
+        assertEquals("2222", dao.store[0].pickupCode)
+    }
+
+    @Test
+    fun `deleteAllUnpicked on empty store is no-op`() = runBlocking {
+        val (repo, dao) = newRepo()
+        repo.deleteAllUnpicked()
+        assertEquals(0, dao.store.size)
     }
 }

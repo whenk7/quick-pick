@@ -23,6 +23,7 @@ import com.quickpick.ui.component.EmptyState
 import com.quickpick.ui.component.PackageCard
 import com.quickpick.ui.component.TokenChip
 import com.quickpick.ui.component.TokenState
+import com.quickpick.ui.screen.RuleListScreen
 import com.quickpick.ui.screen.SettingsScreen
 import com.quickpick.ui.screen.ThemeSettingsScreen
 import com.quickpick.ui.theme.AppTypography
@@ -87,8 +88,8 @@ class VisualReviewTest {
                 dateLabel = "今天", dateMs = 0L, collapsed = false,
                 hasUnpicked = true, onToggleCollapse = {}, onMarkDayPickedUp = {}
             )
-            PackageCard(record = sampleUnpicked, onTogglePickedUp = {}, onCopyField = {})
-            PackageCard(record = samplePicked, onTogglePickedUp = {}, onCopyField = {})
+            PackageCard(record = sampleUnpicked, onTogglePickedUp = {})
+            PackageCard(record = samplePicked, onTogglePickedUp = {})
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TokenChip(text = "取件码", state = TokenState.NORMAL, onClick = {})
                 TokenChip(text = "44651320", state = TokenState.MATCHED, onClick = {})
@@ -138,13 +139,10 @@ class VisualReviewTest {
 
     // ---- 页面级 ----
 
-    private fun settingsVm(engine: String? = null): SettingsViewModel {
+    private fun settingsVm(dynamic: Boolean? = null): SettingsViewModel {
         val app = ApplicationProvider.getApplicationContext<QuickPickApp>()
-        if (engine != null) {
-            runBlocking {
-                app.settingsStore.setThemeEngine(engine)
-                app.settingsStore.setDynamicColor(false)   // 让种子色网格也入镜
-            }
+        if (dynamic != null) {
+            runBlocking { app.settingsStore.setDynamicColor(dynamic) }
         }
         return SettingsViewModel(app)
     }
@@ -153,7 +151,7 @@ class VisualReviewTest {
     fun `settings page fixed light`() =
         captureRoboImage("build/outputs/review/page_settings.png") {
             MiuixTheme(controller = fixed(ColorSchemeMode.Light), textStyles = AppTypography) {
-                SettingsScreen(settingsViewModel = settingsVm(), onOpenAiPrompt = {}, onOpenTheme = {})
+                SettingsScreen(settingsViewModel = settingsVm(), onOpenTheme = {})
             }
         }
 
@@ -166,10 +164,51 @@ class VisualReviewTest {
         }
 
     @Test
-    fun `theme page monet expanded`() =
+    fun `theme page seed grid expanded`() =
         captureRoboImage("build/outputs/review/page_theme_monet.png") {
             MiuixTheme(controller = fixed(ColorSchemeMode.Light), textStyles = AppTypography) {
-                ThemeSettingsScreen(viewModel = settingsVm("MONET"), onBack = {})
+                ThemeSettingsScreen(viewModel = settingsVm(dynamic = false), onBack = {})
+            }
+        }
+
+    /** AI 生成规则页（无短信沙盒 → 空样本态；流程说明卡 + 提示词 + 粘贴区应完整） */
+    @Test
+    fun `ai generate page empty state`() =
+        captureRoboImage("build/outputs/review/page_ai_generate.png") {
+            MiuixTheme(controller = fixed(ColorSchemeMode.Light), textStyles = AppTypography) {
+                com.quickpick.ui.screen.AiPromptScreen(
+                    viewModel = com.quickpick.ui.viewmodel.AiPromptViewModel(
+                        ApplicationProvider.getApplicationContext()
+                    ),
+                    onBack = {}
+                )
+            }
+        }
+
+    /** 地址簿页（v1.1.7 §6） */
+    @Test
+    fun `address alias page`() =
+        captureRoboImage("build/outputs/review/page_address_alias.png") {
+            MiuixTheme(controller = fixed(ColorSchemeMode.Light), textStyles = AppTypography) {
+                com.quickpick.ui.screen.AddressAliasScreen(
+                    viewModel = com.quickpick.ui.viewmodel.AddressAliasViewModel(
+                        ApplicationProvider.getApplicationContext()
+                    ),
+                    onBack = {}
+                )
+            }
+        }
+
+    /** 规则页（带新的三按钮行） */
+    @Test
+    fun `rules page with workshop buttons`() =
+        captureRoboImage("build/outputs/review/page_rules.png") {
+            val app = ApplicationProvider.getApplicationContext<QuickPickApp>()
+            MiuixTheme(controller = fixed(ColorSchemeMode.Light), textStyles = AppTypography) {
+                RuleListScreen(
+                    viewModel = com.quickpick.ui.viewmodel.RuleListViewModel(app),
+                    onAddRule = {}, onEditRule = {}, onExportRule = {}, onOpenAi = {}
+                )
             }
         }
 

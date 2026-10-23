@@ -1,8 +1,6 @@
 package com.quickpick.ui.screen
 
 import android.Manifest
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -96,12 +94,13 @@ fun PackageListScreen(
     // 外层 MainScreen 的 Scaffold 已吃 systemBars inset，内层必须置零，否则上下双份留白
     Scaffold(contentWindowInsets = WindowInsets(0), containerColor = Background) { padding ->
         Column(modifier = Modifier.padding(padding)) {
-            // 标题栏
+            // 标题栏（v1.1.7 §8：副标题 = 待取件数 · 扫描时间范围）
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
                 Text("取件宝", style = MiuixTheme.textStyles.title2, color = TextPrimary)
                 if (hasPermission && packages.isNotEmpty()) {
+                    val scanDays by viewModel.scanWindowDays.collectAsStateWithLifecycle()
                     Text(
-                        text = "$unpickedCount 件待取",
+                        text = "$unpickedCount 件待取 · 近${com.quickpick.ui.component.scanWindowLabel(scanDays)}",
                         style = MiuixTheme.textStyles.body2,
                         color = TextSecondary
                     )
@@ -238,8 +237,7 @@ fun PackageListScreen(
                                     DayGroupContent(
                                         packages = pkgs,
                                         collapsed = dateMs in collapsedDays,
-                                        onTogglePickedUp = { viewModel.togglePickedUp(it) },
-                                        onCopyField = { copyToClipboard(context, it) }
+                                        onTogglePickedUp = { viewModel.togglePickedUp(it) }
                                     )
                                 }
                             }
@@ -249,12 +247,6 @@ fun PackageListScreen(
             }
         }
     }
-}
-
-private fun copyToClipboard(context: Context, text: String) {
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    clipboard.setPrimaryClip(ClipData.newPlainText("", text))
-    Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
 }
 
 /** 时间戳归一到本地当天 00:00:00 用于分组（与 DAO 的 'localtime' 日界一致） */

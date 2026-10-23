@@ -27,5 +27,7 @@ data class PackageRecordEntity(
     @ColumnInfo(name = "rule_id") val ruleId: Long? = null,
     @ColumnInfo(name = "sms_id") val smsId: String? = null,
     @ColumnInfo(name = "sms_thread_id") val smsThreadId: Long? = null,
+    // v3（2026-10-23）：发件人号码，「短信原文」弹窗展示用；老记录为 NULL，重扫回填
+    @ColumnInfo(name = "sms_sender") val smsSender: String? = null,
     @ColumnInfo(name = "created_at") val createdAt: Long = System.currentTimeMillis()
 )

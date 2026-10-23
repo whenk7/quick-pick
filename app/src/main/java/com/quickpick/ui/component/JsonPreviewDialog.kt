@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -44,6 +45,9 @@ fun JsonPreviewDialog(
     val context = LocalContext.current
     // 按行拆给 LazyColumn：超长 JSON 不压单个大 Text；空行占位一个空格防止行高塌陷
     val lines = remember(json) { json.lines().map { it.ifEmpty { " " } } }
+
+    // v1.1.7 §2：OverlayDialog 不消费返回键，自己拦——返回 = 关弹窗
+    BackHandler(enabled = show) { onDismiss() }
 
     OverlayDialog(
         show = show,

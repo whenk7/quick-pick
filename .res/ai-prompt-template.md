@@ -1,53 +1,21 @@
-# AI 生成提取规则 — 预置提示词
+# AI 生成规则 — 提示词说明
 
-## 中文版（推荐）
+> 2026-10-23 重写。运行时使用的最新模板在 `AiPromptViewModel.PROMPT_TEMPLATE`（代码为权威），
+> 本文档只描述设计意图，不再复制全文以免双写漂移。
 
-```
-你是一个快递短信解析专家。我会给你一条快递取件通知短信，请你分析短信内容，
-为每个字段提取"前缀"和"后缀"锚点，输出 JSON 格式的提取规则。
+## 设计要点
 
-字段说明：
-- trackingNumber: 快递单号（运单号，如 SF1234567890）
-- pickupCode: 取件码 / 快递柜号 / 货架号（取件凭证）
-- address: 取件地址 / 驿站名 / 快递柜位置
-- phone: 快递员或客服电话（短信中有则提取，无则留空）
+- **批量样本**：用户短信样本（快递 15 + 通知 5 封顶 20）随提示词一起复制。
+  通知样本是反面教材，提示词明确要求"不要为通知生成规则、且规则不得误提取通知"。
+- **只带正文**：发送方/时间不进提示词（用户在页面逐条审查，可移除，可手动补齐）。
+- **引擎语义写进提示词**：indexOf 首次出现、suffix 留空取到文末、suffix 配了没命中判 null（E1）、
+  锚点宁长勿短防撞「已到站/到咸阳」式首次出现陷阱、brand 统一取【】签名。
+- **完整 schema**：name + senderPattern + fields{trackingNumber/pickupCode/address/phone/brand}。
+- 输出严格 JSON 数组，允许 markdown 围栏（导入方 JsonExporter.sanitizeAiJson 自动剥）。
 
-规则格式：
-每个字段用 prefix（前缀固定文本）和 suffix（后缀固定文本）定位。
-提取逻辑：在短信中找到 prefix，取其后内容，直到 suffix 截止。
-prefix 和 suffix 尽量取最短、最能唯一定位的文本。
-如果短信中没有该字段，prefix 和 suffix 都留空字符串 ""。
+## 导入侧校验（JsonExporter）
 
-输出严格 JSON，不要任何解释：
-
-{
-  "name": "快递公司名",
-  "fields": {
-    "trackingNumber": { "prefix": "单号", "suffix": "，" },
-    "pickupCode":    { "prefix": "取件码：", "suffix": "，" },
-    "address":       { "prefix": "到达", "suffix": "，" },
-    "phone":         { "prefix": "电话：", "suffix": "" }
-  }
-}
-
-短信内容：
----
-{{SMS_CONTENT}}
----
-
-请输出 JSON：
-```
-
-## 使用方式
-
-App 将 `{{SMS_CONTENT}}` 替换为用户粘贴的短信原文，生成完整 prompt。
-用户一键复制 → 去 ChatGPT / Claude / Kimi / 豆包 等任意 AI 服务粘贴 → 获得 JSON → 导入取件宝。
-
-## JSON 校验
-
-导入时 App 做以下校验：
-1. 是否为合法 JSON
-2. 是否包含 name 和 fields
-3. fields 中的 key 是否在允许列表中（trackingNumber / pickupCode / address / phone）
-4. 每个 field 是否包含 prefix 和 suffix 字符串
-5. 校验不通过 → 提示用户 JSON 格式不正确，请重新生成
+1. 合法 JSON（单对象或数组均可，智能识别）
+2. 必含 name 和 fields；fields 内 key 在允许列表（trackingNumber/pickupCode/address/phone/brand）
+3. 每字段含 prefix/suffix 字符串；空串归一为 null
+4. 同名冲突逐条裁决：覆盖 / 跳过

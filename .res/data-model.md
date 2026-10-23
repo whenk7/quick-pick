@@ -34,9 +34,11 @@
 | sms_body | TEXT | NOT NULL | 原始短信全文 |
 | sms_timestamp | INTEGER | NOT NULL | 短信接收时间(ms) |
 | is_picked_up | INTEGER | NOT NULL, DEFAULT 0 | 0=未取, 1=已取 |
-| is_incomplete | INTEGER | NOT NULL, DEFAULT 0 | 0=完整, 1=字段不全 |
+| ~~is_incomplete~~ | — | v2 起已删 | — |
 | rule_id | INTEGER | NULLABLE, FK → match_rules.id ON DELETE SET NULL | 匹配的规则 ID |
 | sms_id | TEXT | NULLABLE | 系统短信 ID（去重用） |
+| sms_thread_id | INTEGER | NULLABLE | 短信会话 ID（v2 加；查看短信会话用） |
+| sms_sender | TEXT | NULLABLE | 发件人号码（v3 起，原文弹窗展示；老记录 NULL 重扫回填） |
 | created_at | INTEGER | NOT NULL | 记录创建时间(ms) |
 
 ### 3. scanned_sms（已扫描短信）

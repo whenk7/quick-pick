@@ -101,7 +101,6 @@ fun DayGroupContent(
     packages: List<PackageRecord>,
     collapsed: Boolean,
     onTogglePickedUp: (PackageRecord) -> Unit,
-    onCopyField: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     AnimatedVisibility(visible = !collapsed) {
@@ -110,7 +109,6 @@ fun DayGroupContent(
                 PackageCard(
                     record = pkg,
                     onTogglePickedUp = { onTogglePickedUp(pkg) },
-                    onCopyField = onCopyField,
                     modifier = Modifier.padding(bottom = 10.dp)
                 )
             }
@@ -130,6 +128,10 @@ fun formatRelativeTime(timestampMs: Long): String {
         else -> SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(timestampMs))
     }
 }
+
+/** 卡片行内时间（v1.1.7：卡片不显示日期，日期靠吸顶分组头） */
+fun formatTimeHm(timestampMs: Long): String =
+    SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestampMs))
 
 /** 分组标题格式：今天 · 5月30日 / 昨天 · 5月29日 / 5月27日 · 周二 */
 fun formatDayLabel(timestampMs: Long): String {

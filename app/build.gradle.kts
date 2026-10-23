@@ -19,8 +19,8 @@ android {
         applicationId = "com.quickpick"
         minSdk = 33
         targetSdk = 37
-        versionCode = 4
-        versionName = "1.1.2"
+        versionCode = 9
+        versionName = "1.1.7"
     }
 
     signingConfigs {
@@ -36,9 +36,10 @@ android {
 
     buildTypes {
         release {
+            // 开源项目不混淆（裁决 2026-10-23）：R8 只瘦身+优化，不更名——栈可读、体积仍小
             isMinifyEnabled = true
             isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             if (keystoreFile != null) {
                 signingConfig = signingConfigs.getByName("release")
             }
@@ -96,6 +97,8 @@ dependencies {
     // Activity & Navigation
     implementation("androidx.activity:activity-compose:1.11.0")
     implementation("androidx.navigation:navigation-compose:2.9.5")
+    // miuix 窗口弹层的返回手势需要 NavigationEventDispatcherOwner（本是运行时传递依赖，编译期不可见，显式引入）
+    implementation("androidx.navigationevent:navigationevent-compose:1.1.2")
 
     // Lifecycle（collectAsStateWithLifecycle 需要 runtime-compose）
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.4")
@@ -124,4 +127,6 @@ dependencies {
     testImplementation("io.github.takahirom.roborazzi:roborazzi:1.77.0")
     testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.77.0")
     testImplementation("org.robolectric:robolectric:4.17")
+    // 点击/交互复现测试（compose-ui-test，版本随 BOM）
+    testImplementation("androidx.compose.ui:ui-test-junit4")
 }

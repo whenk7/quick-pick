@@ -69,7 +69,7 @@ UI：v1.1.0 起 M3 全面迁移到 miuix 0.9.4（ui+blur），app/src 零 materi
 - 规则编辑器：分词区吸顶 + 每个字段独立卡片 + 选中抬高阴影 + 底部卡片预览
 - 匹配优先级：字段数多者优先，同样多时按规则顺序
 - 已取件不删除，置灰保留
-- "全部已取"操作需二次确认弹窗
+- "全部已取"（日分组头）直接执行不弹确认——误触可回（点圆圈逐件恢复）；设计文档的二次确认条目已被 v1.1.5 轻提示裁决取代
 - 合规声明在权限引导页和设置页两处展示
 - 预置规则先跑 2 家（顺丰/京东），后期再决定是否扩充
 - 分发渠道：GitHub Release 侧载；不上 Google Play（READ_SMS 受限权限政策不覆盖本品类）；仅 Android，不支持鸿蒙/iOS
@@ -80,7 +80,7 @@ UI：v1.1.0 起 M3 全面迁移到 miuix 0.9.4（ui+blur），app/src 零 materi
 
 单人项目，最简模型：**main 永远可发布，分支按"事情"开，版本用 tag 打**。
 
-- **main**：主干，文档+代码都在，永远保持可构建状态
+- **main**：主干，文档+代码都在，永远保持可构建状态。**禁止直接在 main 上写代码**（2026-10-23 起，用户裁决）——任何改动先开开发分支，绿了合回 main
 - **开发分支**按事情命名，干完合回 main 就删：
   `feat/xxx`（新功能）`fix/xxx`（修 bug）`refactor/xxx`（重构）`docs/xxx`（文档）
 - **版本不是分支，是 tag**：`v1.0.0`、`v1.1.0` 打在 main 上，GitHub Release 从 tag 发 APK；回溯用 `git checkout v1.0.0`
@@ -101,7 +101,12 @@ UI：v1.1.0 起 M3 全面迁移到 miuix 0.9.4（ui+blur），app/src 零 materi
 - ✅ 全分支终审（opus）：0 Critical / 2 Important / 7 Minor，Review Focus 5 项全过。Important 均为跨层缺陷：老记录 sms_thread_id 不随重扫回填（升级用户「查看短信」隐形）、TokenChip 命中态暗色下不可读
 - ✅ v1.1.1 修复发布（versionCode 3，两处 Important）
 - ✅ v1.1.2（versionCode 4）：引擎 E1（suffix 未命中判 null）+ 无单号重复/催取归并 + 主题系统重做（双引擎/主题页/玻璃调参/豆绿清洗）+ JVM 测试基建（45 例 + Roborazzi 渲染审查）
-- ⬜ 真机验收（清单见下一步；主题页/Monet/玻璃滑杆重点过目）
+- ✅ v1.1.3（versionCode 5）：设置页点击闪退修复（miuix 弹层缺 NavigationEventDispatcherOwner，主题根部 provide）+ 不混淆裁决（-dontobfuscate，3.19MB→3.70MB 换可读栈）
+- ✅ v1.1.4（versionCode 6）：预置规则极简重置（顺丰/京东只留取件码+品牌，preset_v3 覆盖升级）+ 规则工坊（规则页横排三按钮：导入弹窗粘贴/文件双通道、导出复制/存文件、AI 生成页重写——短信样本审查+手动补齐+提示词一键复制+直接粘贴入库）+ 设置页规则相关入口移除
+- ✅ v1.1.5（versionCode 7）：规则编辑/删除/新增改 Snackbar 轻提示（5s 可关，不弹窗）；下拉重扫移除规则不匹配的未取件记录（已取件历史保留置灰）；主页双击返回退出（2s 窗口）；已取件卡片紧凑单行化；规则编辑器字段裁到 名称/取件码/地址/品牌（发件方/单号/电话移除——端口常变不可靠、无用字段）；预置 preset_v4 清 senderPattern；跳短信三级兜底（会话 URI → 默认短信应用 → 温和提示，MIUI 不认会话 URI 的坑）
+- ✅ v1.1.6（versionCode 8）：「查看短信」改应用内原文弹窗（发件人/时间/正文/复制全文，替代跳系统短信应用）；Room v3 加 sms_sender 列（老记录 NULL，重扫回填）；预置规则自洽测试（从 sampleSms 必能提出取件码）
+- ✅ v1.1.7（versionCode 9，feat/v1.1.7）：反馈批次+沉浸模式。spec `docs/superpowers/specs/2026-10-23-v1.1.7-feedback-batch.md`，plan 同名 plans/。要点：删光规则重扫清空未取件；弹窗返回语义（可关=返回关/裁决=吞返回堵点外部，miuix OverlayDialog 不消费返回键故自拦）；Snackbar 新顶旧（miuix host 多条并存模型 → 自管理 CoalescingSnackbarHost）；卡片三行无展开无复制（单击无功能/长按原文/左滑已取件 SwipeToReveal 35% 阈值）；规则名纯记忆化，卡片标题 fallback「快递」；全局地址簿（DataStore，显示层替换）；主题砍引擎（动态取色开关+种子色网格+miuix 默认，seedColor 可空化，dynamicColor 默认改 false）；首页副标题「N 件待取 · 近三月」；规则页四按钮（自绘 QpIcons）；导入弹窗右侧竖排本地文件；沉浸模式（长按底栏快递，DampedDrag 钩子实现长按——pointerInput 旁观会掐死点击；onDrag(Zero) 按下即发）
+- ⬜ 真机验收（清单见下一步）
 
 ## 执行模式（已和用户商定）
 
