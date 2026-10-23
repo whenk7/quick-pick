@@ -156,21 +156,11 @@ fun MainScreen(
     val glassHighlight by settingsViewModel.glassHighlight.collectAsStateWithLifecycle()
     val glassAlpha by settingsViewModel.glassAlpha.collectAsStateWithLifecycle()
 
-    // 全局轻提示：跨页动作（规则保存/删除等）统一在这里出 Snackbar
-    val snackbarHostState = remember { SnackbarHostState() }
-    LaunchedEffect(Unit) {
-        UiNotifier.messages.collect { msg ->
-            snackbarHostState.showSnackbar(
-                message = msg,
-                actionLabel = "我知道了",
-                duration = SnackbarDuration.Custom(5000)
-            )
-        }
-    }
+    // 全局轻提示：CoalescingSnackbarHost 自管理单条状态（同一时间只有一条，新顶旧，v1.1.7 §3）
 
-    // 主页 tab 双击返回退出（2 秒窗口，提示时长与窗口一致）；子页返回键由 NavHost 自己处理
+    // 主页 tab 双击返回退出（2 秒窗口）；子页返回键由 NavHost 自己处理；
+    // 弹窗开着时弹窗内的 BackHandler 优先拦截（v1.1.7 §2），这里的双击逻辑自动不触发
     val activity = context as? Activity
-    val scope = rememberCoroutineScope()
     var lastBackAt by remember { mutableLongStateOf(0L) }
     BackHandler {
         val now = System.currentTimeMillis()
@@ -178,9 +168,7 @@ fun MainScreen(
             activity?.finish()
         } else {
             lastBackAt = now
-            scope.launch {
-                snackbarHostState.showSnackbar("再按一次退出", duration = SnackbarDuration.Custom(2000))
-            }
+            UiNotifier.notify("再按一次退出", actionLabel = null)
         }
     }
 
@@ -189,7 +177,7 @@ fun MainScreen(
 
     // miuix Scaffold 默认容器色是 surface（白），显式传 Background 保持页面底色
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { com.quickpick.ui.component.CoalescingSnackbarHost() },
         bottomBar = {
             LiquidGlassNavigationBar(
                 currentTab = currentTab,

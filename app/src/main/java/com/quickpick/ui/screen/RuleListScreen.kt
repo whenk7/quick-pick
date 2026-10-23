@@ -58,10 +58,10 @@ fun RuleListScreen(
     val conflict by viewModel.conflict.collectAsStateWithLifecycle()
     val presets = rules.filter { it.isPreset }
     val customs = rules.filter { !it.isPreset }
-    // 删除规则：直接删 + 轻提示（v1.1.5 用户裁决：不再二次确认弹窗）
+    // 删除规则：直接删 + 轻提示（v1.1.5 用户裁决：不再二次确认弹窗；v1.1.7 §3 文案精简）
     val onDeleteRule: (MatchRule) -> Unit = { rule ->
         viewModel.deleteRule(rule)
-        UiNotifier.notify("已删除「${rule.name}」，回快递页下拉清理失效记录")
+        UiNotifier.notify("已删除「${rule.name}」，请首页下拉刷新")
     }
     // JSON 预览目标：非 null 时展示 JsonPreviewDialog（分享改为长按卡片，见 RuleCard）
     var jsonRule by remember { mutableStateOf<MatchRule?>(null) }

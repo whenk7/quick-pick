@@ -3,13 +3,18 @@ package com.quickpick.util
 import kotlinx.coroutines.flow.MutableSharedFlow
 
 /**
- * 跨页轻提示总线：规则保存/删除等动作发生在子页，提示要显示在主页
- * （Snackbar 宿主在 MainScreen）。5 秒自动消失，带「我知道了」可点关闭。
+ * 跨页轻提示总线：规则保存/删除等动作发生在子页，提示显示在主页
+ * （宿主是 MainScreen 的 CoalescingSnackbarHost——同一时间只有一条，新顶旧）。
+ * 5 秒自动消失；actionLabel 非空时显示动作按钮（如「我知道了」），点击即关。
  */
 object UiNotifier {
-    val messages = MutableSharedFlow<String>(extraBufferCapacity = 8)
 
-    fun notify(message: String) {
-        messages.tryEmit(message)
+    /** @param actionLabel 动作按钮文案；null = 纯文本无按钮（如「再按一次退出」） */
+    data class Toast(val message: String, val actionLabel: String? = "我知道了", val nonce: Long = 0L)
+
+    val messages = MutableSharedFlow<Toast>(extraBufferCapacity = 8)
+
+    fun notify(message: String, actionLabel: String? = "我知道了") {
+        messages.tryEmit(Toast(message, actionLabel))
     }
 }

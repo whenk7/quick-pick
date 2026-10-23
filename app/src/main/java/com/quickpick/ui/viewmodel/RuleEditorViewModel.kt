@@ -228,10 +228,8 @@ class RuleEditorViewModel(application: Application) : AndroidViewModel(applicati
             } else {
                 repo.insert(rule)
             }
-            // 轻提示引导下拉重扫（不弹窗打断，v1.1.5 用户裁决）
-            UiNotifier.notify(
-                if (wasEdit) "规则已更新，回快递页下拉重扫生效" else "已保存，回快递页下拉扫描历史短信"
-            )
+            // 轻提示引导下拉重扫（不弹窗打断，v1.1.5 用户裁决；v1.1.7 §3 文案精简统一）
+            UiNotifier.notify("已保存「${s.ruleName}」，请首页下拉刷新")
             _savedEvents.emit(wasEdit)
         }
     }
