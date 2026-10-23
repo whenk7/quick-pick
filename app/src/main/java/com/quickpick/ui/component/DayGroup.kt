@@ -101,7 +101,8 @@ fun DayGroupContent(
     packages: List<PackageRecord>,
     collapsed: Boolean,
     onTogglePickedUp: (PackageRecord) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onDelete: ((PackageRecord) -> Unit)? = null
 ) {
     AnimatedVisibility(visible = !collapsed) {
         Column(modifier = modifier) {
@@ -109,6 +110,7 @@ fun DayGroupContent(
                 PackageCard(
                     record = pkg,
                     onTogglePickedUp = { onTogglePickedUp(pkg) },
+                    onDelete = onDelete?.let { del -> { del(pkg) } },
                     modifier = Modifier.padding(bottom = 10.dp)
                 )
             }

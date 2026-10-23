@@ -47,4 +47,12 @@ interface PackageRecordDao {
     /** 删光全部规则后的全量重扫（v1.1.7）：无规则 = 一切不匹配，未取件全清；已取件历史保留 */
     @Query("DELETE FROM package_records WHERE is_picked_up = 0")
     suspend fun deleteAllUnpicked()
+
+    /** 扫描窗口调小（v1.1.8）：移除窗口外的未取件记录；已取件历史保留 */
+    @Query("DELETE FROM package_records WHERE is_picked_up = 0 AND sms_timestamp < :cutoffMs")
+    suspend fun deleteUnpickedOlderThan(cutoffMs: Long): Int
+
+    /** 用户手动删除单条记录（v1.1.8 原文弹窗删除按钮）；无论是否已取件 */
+    @Query("DELETE FROM package_records WHERE id = :id")
+    suspend fun deleteById(id: Long)
 }

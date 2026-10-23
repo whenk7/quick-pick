@@ -26,6 +26,12 @@ class PackageRepository(private val dao: PackageRecordDao) {
     /** 删光全部规则后的重扫（v1.1.7）：清空全部未取件记录，已取件历史保留 */
     suspend fun deleteAllUnpicked() = dao.deleteAllUnpicked()
 
+    /** 扫描窗口调小（v1.1.8）：移除窗口外未取件；已取件保留。幂等（调大时无窗口外未取件可删） */
+    suspend fun deleteUnpickedOlderThan(cutoffMs: Long) = dao.deleteUnpickedOlderThan(cutoffMs)
+
+    /** 用户手动删除单条（无论是否已取件），调用方负责把 smsId 加入忽略名单防重扫恢复 */
+    suspend fun deleteById(id: Long) = dao.deleteById(id)
+
     /**
      * 扫描入库（含去重与换柜覆盖，对应 edge-cases 五）：
      * - 同一条短信（smsId）→ 跳过（顺带回填老记录的 smsThreadId）

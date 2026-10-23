@@ -62,6 +62,7 @@ fun CoalescingSnackbarHost(modifier: Modifier = Modifier) {
                 override suspend fun performAction() { current = null }
             }
         }
-        Snackbar(data = wired, modifier = modifier.navigationBarsPadding().padding(bottom = 96.dp))
+        // 贴底（navBar inset + 小余量）；玻璃栏悬浮在 bottomBar 槽，snackbarHost 槽在其上方，无需额外避让
+        Snackbar(data = wired, modifier = modifier.navigationBarsPadding().padding(bottom = 8.dp))
     }
 }

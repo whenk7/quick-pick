@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.quickpick.domain.model.PackageRecord
+import com.quickpick.ui.theme.Danger
 import com.quickpick.ui.theme.InputBackground
 import com.quickpick.ui.theme.Primary
 import com.quickpick.ui.theme.TextPrimary
@@ -45,7 +46,9 @@ import java.util.Locale
 fun SmsDetailDialog(
     show: Boolean,
     record: PackageRecord?,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    // 删除按钮（v1.1.8）：删记录（不是短信），无论是否已取件；null = 不显示（如编辑器预览卡）
+    onDelete: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
 
@@ -114,6 +117,18 @@ fun SmsDetailDialog(
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.textButtonColorsPrimary()
             )
+            if (onDelete != null) {
+                // 删除记录（非短信）：危险色文字按钮，温和文案不用「删除短信」歧义
+                TextButton(
+                    text = "删除这条记录",
+                    onClick = onDelete,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.textButtonColors(
+                        textColor = Danger,
+                        disabledTextColor = Danger.copy(alpha = 0.4f)
+                    )
+                )
+            }
         }
     }
 }

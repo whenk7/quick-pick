@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.quickpick.data.preset.PresetFlags
 import kotlinx.coroutines.flow.Flow
@@ -42,6 +43,8 @@ class SettingsStore(private val context: Context) : PresetFlags {
         private val KEY_ADDRESS_ALIASES = stringPreferencesKey("address_aliases")
         // 沉浸式取件模式首次引导（v1.1.7 §11）
         private val KEY_IMMERSION_GUIDE_SHOWN = booleanPreferencesKey("immersion_guide_shown")
+        // 用户手动删除的记录来源短信（v1.1.8）：重扫跳过，否则全量重扫会把删除的记录扫回来
+        private val KEY_IGNORED_SMS_IDS = stringSetPreferencesKey("ignored_sms_ids")
     }
 
     val onboardingDone: Flow<Boolean> =
@@ -195,5 +198,14 @@ class SettingsStore(private val context: Context) : PresetFlags {
 
     suspend fun setImmersionGuideShown() {
         context.dataStore.edit { it[KEY_IMMERSION_GUIDE_SHOWN] = true }
+    }
+
+    // ============ 忽略名单（v1.1.8） ============
+
+    val ignoredSmsIds: Flow<Set<String>> =
+        context.dataStore.data.map { it[KEY_IGNORED_SMS_IDS] ?: emptySet() }
+
+    suspend fun ignoreSms(smsId: String) {
+        context.dataStore.edit { it[KEY_IGNORED_SMS_IDS] = (it[KEY_IGNORED_SMS_IDS] ?: emptySet()) + smsId }
     }
 }

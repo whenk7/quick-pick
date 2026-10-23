@@ -37,7 +37,9 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 fun PackageCard(
     record: PackageRecord,
     onTogglePickedUp: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // 删除按钮（v1.1.8，原文弹窗内）；null = 不显示（编辑器预览卡）
+    onDelete: (() -> Unit)? = null
 ) {
     var showSmsDetail by remember { mutableStateOf(false) }
     val brandColor = BrandColors.forName(record.companyName)
@@ -90,7 +92,7 @@ fun PackageCard(
                 IconButton(
                     onClick = onTogglePickedUp,
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(48.dp)
                         .semantics(mergeDescendants = true) { contentDescription = "取消已取件" }
                 ) {
                     Box(
@@ -105,7 +107,11 @@ fun PackageCard(
                 }
             }
         }
-        SmsDetailDialog(show = showSmsDetail, record = record, onDismiss = { showSmsDetail = false })
+        SmsDetailDialog(
+            show = showSmsDetail, record = record,
+            onDismiss = { showSmsDetail = false },
+            onDelete = onDelete?.let { del -> { del(); showSmsDetail = false } }
+        )
         return
     }
 
@@ -130,7 +136,7 @@ fun PackageCard(
         cornerRadius = 16.dp,
         colors = CardDefaults.defaultColors(color = Surface)
     ) {
-        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
             // 行1：品牌点 + 标题 + 时间 + 圆圈（日期不显示——吸顶分组头已有）
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -174,9 +180,9 @@ fun PackageCard(
                 }
             }
 
-            // 行2：取件码大字（行距收紧：6dp）
+            // 行2：取件码大字（行距收紧：4dp）
             record.pickupCode?.let { code ->
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = if (code.length > 4) "取件码" else "柜号",
@@ -208,5 +214,9 @@ fun PackageCard(
     }
 
     // 短信原文弹窗：常驻组合 + show 参数（退出动画约定同 ConfirmDialog）
-    SmsDetailDialog(show = showSmsDetail, record = record, onDismiss = { showSmsDetail = false })
+    SmsDetailDialog(
+            show = showSmsDetail, record = record,
+            onDismiss = { showSmsDetail = false },
+            onDelete = onDelete?.let { del -> { del(); showSmsDetail = false } }
+        )
 }

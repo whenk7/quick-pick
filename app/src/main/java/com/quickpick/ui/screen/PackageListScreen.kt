@@ -237,7 +237,8 @@ fun PackageListScreen(
                                     DayGroupContent(
                                         packages = pkgs,
                                         collapsed = dateMs in collapsedDays,
-                                        onTogglePickedUp = { viewModel.togglePickedUp(it) }
+                                        onTogglePickedUp = { viewModel.togglePickedUp(it) },
+                                        onDelete = { viewModel.deleteRecord(it) }
                                     )
                                 }
                             }

@@ -77,6 +77,16 @@ class PackageRepositoryTest {
         override suspend fun deleteAllUnpicked() {
             store.removeAll { !it.isPickedUp }
         }
+
+        override suspend fun deleteUnpickedOlderThan(cutoffMs: Long): Int {
+            val before = store.size
+            store.removeAll { !it.isPickedUp && it.smsTimestamp < cutoffMs }
+            return before - store.size
+        }
+
+        override suspend fun deleteById(id: Long) {
+            store.removeAll { it.id == id }
+        }
     }
 
     private fun ts(day: Int, hour: Int = 12): Long =
@@ -331,6 +341,31 @@ class PackageRepositoryTest {
     fun `deleteAllUnpicked on empty store is no-op`() = runBlocking {
         val (repo, dao) = newRepo()
         repo.deleteAllUnpicked()
+        assertEquals(0, dao.store.size)
+    }
+
+    // ---- 扫描窗口变更清理（v1.1.8：调小窗口即移除窗口外未取件；已取件保留）----
+
+    @Test
+    fun `shrink window removes unpicked outside window, keeps picked`() = runBlocking {
+        val (repo, dao) = newRepo()
+        repo.insertFromSms(rec(day = 13, smsId = "old-unpicked", code = "1111"))
+        repo.insertFromSms(rec(day = 14, smsId = "old-picked", code = "2222"))
+        repo.insertFromSms(rec(day = 25, smsId = "new", code = "3333"))
+        dao.updatePickedUp(dao.store.first { it.smsId == "old-picked" }.id, true)
+        // 窗口调到只覆盖 20 号之后
+        repo.deleteUnpickedOlderThan(ts(20))
+        assertEquals(listOf("new", "old-picked"), dao.store.map { it.smsId ?: "" }.sorted())
+        assertTrue(dao.store.first { it.smsId == "old-picked" }.isPickedUp, "已取件历史保留")
+    }
+
+    @Test
+    fun `deleteById removes record regardless of picked state`() = runBlocking {
+        val (repo, dao) = newRepo()
+        repo.insertFromSms(rec(day = 13, smsId = "a", code = "1111"))
+        val id = dao.store[0].id
+        dao.updatePickedUp(id, true)
+        repo.deleteById(id)
         assertEquals(0, dao.store.size)
     }
 }

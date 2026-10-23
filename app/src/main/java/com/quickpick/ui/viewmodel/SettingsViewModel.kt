@@ -10,6 +10,10 @@ import kotlinx.coroutines.launch
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val settingsStore = (application as QuickPickApp).settingsStore
+    private val packageRepo =
+        com.quickpick.data.repository.PackageRepository(
+            (application as QuickPickApp).database.packageRecordDao()
+        )
 
     // 偏好读写（初值与 SettingsStore 默认值一致）
     val scanWindowDays: StateFlow<Int> = settingsStore.scanWindowDays
@@ -46,7 +50,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.32f)
 
     fun setScanWindowDays(days: Int) {
-        viewModelScope.launch { settingsStore.setScanWindowDays(days) }
+        viewModelScope.launch {
+            settingsStore.setScanWindowDays(days)
+            // v1.1.8：窗口变更即移除窗口外未取件（已取件历史保留）；调大时无未取件可删（幂等）
+            packageRepo.deleteUnpickedOlderThan(System.currentTimeMillis() - days * 86400000L)
+        }
     }
 
     fun setThemeMode(mode: String) {

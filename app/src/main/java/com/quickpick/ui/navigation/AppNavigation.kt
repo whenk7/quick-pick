@@ -162,7 +162,9 @@ fun MainScreen(
     val context = LocalContext.current
     val app = context.applicationContext as QuickPickApp
 
-    var currentTab by remember { mutableStateOf(BottomTab.PACKAGES) }
+    // rememberSaveable：NavHost 前进到子页时主页组合销毁，remember 会丢 tab 回到快递
+    // （v1.1.8 真机反馈「返回直接回快递 tab」根因）；saveable 依赖 NavBackStackEntry 存活
+    var currentTab by rememberSaveable { mutableStateOf(BottomTab.PACKAGES) }
     val scope = rememberCoroutineScope()
 
     // 沉浸式取件模式（v1.1.7 §11）：独立状态，切 tab 不退出；

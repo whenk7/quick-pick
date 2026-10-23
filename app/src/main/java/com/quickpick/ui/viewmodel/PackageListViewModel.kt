@@ -17,6 +17,7 @@ import com.quickpick.data.repository.SmsRepository
 import com.quickpick.domain.engine.MatchEngine
 import com.quickpick.domain.model.PackageRecord
 import com.quickpick.util.SmsReader
+import com.quickpick.util.UiNotifier
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -115,7 +116,14 @@ class PackageListViewModel(
                     return@launch
                 }
 
+                // 用户手动删除过的短信：标已扫但跳过入库（v1.1.8 忽略名单，重扫不复活）
+                val ignored = settingsStore.ignoredSmsIds.first()
+
                 messages.forEach { sms ->
+                    if (sms.id in ignored) {
+                        smsRepo.markScanned(sms.id)
+                        return@forEach
+                    }
                     if (smsRepo.isScanned(sms.id)) return@forEach
                     val result = MatchEngine.findBestMatch(sms.body, rules, sms.address)
                     if (result != null) {
@@ -169,6 +177,15 @@ class PackageListViewModel(
     fun togglePickedUp(record: PackageRecord) {
         viewModelScope.launch {
             packageRepo.setPickedUp(record.id, !record.isPickedUp)
+        }
+    }
+
+    /** 手动删除记录（v1.1.8 原文弹窗）：无论是否已取件；短信加忽略名单防重扫复活 */
+    fun deleteRecord(record: PackageRecord) {
+        viewModelScope.launch {
+            packageRepo.deleteById(record.id)
+            record.smsId?.let { settingsStore.ignoreSms(it) }
+            UiNotifier.notify("已删除该快递信息")
         }
     }
 
