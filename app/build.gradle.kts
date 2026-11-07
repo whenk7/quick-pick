@@ -19,8 +19,8 @@ android {
         applicationId = "com.quickpick"
         minSdk = 33
         targetSdk = 37
-        versionCode = 14
-        versionName = "1.1.12"
+        versionCode = 15
+        versionName = "1.1.13"
     }
 
     signingConfigs {
@@ -75,6 +75,12 @@ kotlin {
 // 单测统一跑 21（纯 Kotlin 测试不受影响）。本机 21 在 ~/.gradle/gradle.properties 登记，CI 直接装 21。
 tasks.withType<Test> {
     javaLauncher = javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) }
+    // Robolectric 运行时下载 android-all jar 走 Maven Central，国内网络常卡死。
+    // 走阿里云镜像；非镜像环境（CI）上该配置只是多一次失败重试，不影响功能。
+    systemProperty(
+        "robolectric.dependency.repo.url",
+        "https://maven.aliyun.com/repository/central"
+    )
 }
 
 dependencies {

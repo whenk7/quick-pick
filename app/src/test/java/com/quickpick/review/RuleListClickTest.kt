@@ -41,9 +41,11 @@ class RuleListClickTest {
     fun `rule cards expose accessible json and delete icons`() {
         val app = ApplicationProvider.getApplicationContext<QuickPickApp>()
         runBlocking {
-            app.database.matchRuleDao().insert(
-                MatchRuleEntity(name = "顺丰速运", isPreset = true, codePrefix = "取件码：", codeSuffix = "，")
-            )
+            // v1.1.11 起不再内置预置规则，测试自己建三张卡（不依赖数据库里有什么）
+            val dao = app.database.matchRuleDao()
+            listOf("测试规则一", "测试规则二", "测试规则三").forEach { name ->
+                dao.insert(MatchRuleEntity(name = name, codePrefix = "取件码：", codeSuffix = "，"))
+            }
         }
         composeRule.setContent {
             QuickPickTheme {
