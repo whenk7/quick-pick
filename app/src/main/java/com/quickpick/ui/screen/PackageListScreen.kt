@@ -134,6 +134,21 @@ fun PackageListScreen(
                 }
             }
 
+            // 下拉刷新包在最外层：空态也要能下拉（v1.1.10 修复——原先只在「有数据」分支里
+            // 渲染 PullToRefresh，一旦列表为空就彻底没有重扫入口，规则导入后无法触发全量重扫，
+            // 只能卸载重装。空态内容用可滚动容器撑满，否则没有可拖拽的内容）。
+            PullToRefresh(
+                isRefreshing = isScanning,
+                onRefresh = { viewModel.refresh() },
+                modifier = Modifier.weight(1f),
+                color = Primary,
+                refreshTexts = listOf("下拉刷新", "松开刷新", "正在刷新…", "刷新完成"),
+                refreshTextStyle = TextStyle(
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = TextTertiary
+                )
+            ) {
             when {
                 // 权限被回收但已有数据 → 落到 else 列表分支，banner 压顶提示，数据可看
                 !hasPermission && packages.isEmpty() -> {
@@ -141,7 +156,7 @@ fun PackageListScreen(
                         emoji = "📬",
                         title = "需要短信权限才能提取快递信息",
                         description = "所有数据仅存储在本地，不上传、不联网",
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.fillMaxSize(),
                         action = {
                             Button(
                                 onClick = { permissionLauncher.launch(Manifest.permission.READ_SMS) },
@@ -157,7 +172,7 @@ fun PackageListScreen(
                         emoji = "🔍",
                         title = "扫描中…",
                         description = "正在读取快递短信",
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
                 packages.isEmpty() && ruleCount == 0 -> {
@@ -166,7 +181,7 @@ fun PackageListScreen(
                         emoji = "🧩",
                         title = "还没有匹配规则",
                         description = "添加规则后才能提取快递信息",
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.fillMaxSize(),
                         action = {
                             Button(
                                 onClick = onGoToRules,
@@ -183,7 +198,7 @@ fun PackageListScreen(
                         emoji = "📦",
                         title = "还没有快递消息",
                         description = "坐等包裹到来～\n也可以下拉手动刷新",
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
                 packages.isEmpty() -> {
@@ -192,59 +207,42 @@ fun PackageListScreen(
                         emoji = "🔎",
                         title = "暂未发现快递短信",
                         description = "可以试试添加匹配规则，或下拉刷新",
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.fillMaxSize(),
                         action = {
                             InlineTextButton(text = "添加规则", onClick = onGoToRules)
                         }
                     )
                 }
                 else -> {
-                    // 下拉刷新 = 全量重扫。LazyColumn 必须在 weight(1f) 容器内，
-                    // 否则拿到无限高度约束直接崩溃（初版缺陷）
-                    PullToRefresh(
-                        isRefreshing = isScanning,
-                        onRefresh = { viewModel.refresh() },
-                        modifier = Modifier.weight(1f),
-                        color = Primary,
-                        refreshTexts = listOf("下拉刷新", "松开刷新", "正在刷新…", "刷新完成"),
-                        refreshTextStyle = TextStyle(
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = TextTertiary
-                        )
+                    // 空态也要能下拉刷新（见下方 EmptyListPane）；此处是「有数据」分支
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
                     ) {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            // 底部留白给悬浮玻璃底栏（内容可滚动到栏后透出模糊；inset 动态，三键导航不遮挡）
-                            // top 必须 0：contentPadding 区域不裁剪内容，吸顶 header 停在 padding 之下，
-                            // 留缝会露出滚过的卡片（header 自带 10dp 垂直内边距，视觉间距不缺）
-                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 0.dp, bottom = glassNavBarClearance())
-                        ) {
-                            groupedPackages.forEach { (dateMs, pkgs) ->
-                                // 标题吸顶：背景实体色遮住下方滚动内容（DayGroupHeader 内处理）；
-                                // key 用 dateMs（分组键天然唯一），正文 item 加 -content 后缀避免撞 key
-                                stickyHeader(key = "day-$dateMs") {
-                                    DayGroupHeader(
-                                        dateLabel = formatDayLabel(dateMs),
-                                        dateMs = dateMs,
-                                        collapsed = dateMs in collapsedDays,
-                                        hasUnpicked = pkgs.any { !it.isPickedUp },
-                                        onToggleCollapse = { viewModel.toggleDayCollapse(it) },
-                                        onMarkDayPickedUp = { viewModel.markDayPickedUp(it) }
-                                    )
-                                }
-                                item(key = "day-content-$dateMs") {
-                                    DayGroupContent(
-                                        packages = pkgs,
-                                        collapsed = dateMs in collapsedDays,
-                                        onTogglePickedUp = { viewModel.togglePickedUp(it) },
-                                        onDelete = { viewModel.deleteRecord(it) }
-                                    )
-                                }
+                        groupedPackages.forEach { (dateMs, pkgs) ->
+                            // 标题吸顶：背景实体色遮住下方滚动内容（DayGroupHeader 内处理）；
+                            // key 用 dateMs（分组键天然唯一），正文 item 加 -content 后缀避免撞 key
+                            stickyHeader(key = "day-$dateMs") {
+                                DayGroupHeader(
+                                    dateLabel = formatDayLabel(dateMs),
+                                    dateMs = dateMs,
+                                    collapsed = dateMs in collapsedDays,
+                                    hasUnpicked = pkgs.any { !it.isPickedUp },
+                                    onToggleCollapse = { viewModel.toggleDayCollapse(it) },
+                                    onMarkDayPickedUp = { viewModel.markDayPickedUp(it) }
+                                )
+                            }
+                            item(key = "day-content-$dateMs") {
+                                DayGroupContent(
+                                    packages = pkgs,
+                                    collapsed = dateMs in collapsedDays,
+                                    onTogglePickedUp = { viewModel.togglePickedUp(it) },
+                                    onDelete = { viewModel.deleteRecord(it) }
+                                )
                             }
                         }
                     }
                 }
+            }
             }
         }
     }

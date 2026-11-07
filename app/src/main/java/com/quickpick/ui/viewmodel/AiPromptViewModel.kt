@@ -27,7 +27,13 @@ class AiPromptViewModel(application: Application) : AndroidViewModel(application
     companion object {
         private const val EXPRESS_TARGET = 15
         private const val NOTICE_TARGET = 5
-        private val EXPRESS_KEYWORDS = listOf("取件码", "取货码", "包裹", "驿站", "快递柜", "丰巢", "菜鸟", "取件")
+        // 用于把「疑似快递」样本挑进 AI 提示词。真实语料实测：漏掉「滞留」会让
+        // 「【申通快递】…已在…滞留1天未取，请尽快取件」这种纯催取模板整条漏掉，
+        // 所以补上滞留/超时/到站/智柜/便民商店等高频词（2026-11-08）。
+        private val EXPRESS_KEYWORDS = listOf(
+            "取件码", "取货码", "取件", "包裹", "驿站", "快递柜", "快递", "丰巢", "菜鸟", "袋鼠",
+            "兔喜", "妈妈驿站", "滞留", "超时", "到站", "到达", "便民商店", "帮便利"
+        )
         private const val NINETY_DAYS_MS = 90L * 24 * 3600 * 1000
 
         /**
@@ -39,16 +45,30 @@ class AiPromptViewModel(application: Application) : AndroidViewModel(application
 
 # 规则引擎语义（必须严格遵守）
 - 引擎不用正则：每个字段靠「前缀锚点 prefix + 后缀锚点 suffix」纯文本定位
-- 找到 prefix 后取其后内容，直到 suffix 截止；prefix 或 suffix 留空字符串 = 不提取该字段
-- suffix 留空 = 取到短信末尾（适合字段在句尾）；suffix 填了但短信里找不到 = 该字段不提取（不会兜底取到文末）
-- 定位取「首次出现」：若锚词在短信前半段已出现（如「到」在「已到站」里），锚点必须加长到唯一（如「到咸阳」），宁长勿短
-- brand 字段统一 prefix="【" suffix="】"（取短信签名作品牌）
+- 找到 prefix 后取其后内容，直到 suffix 截止；prefix 留空 = 不提取该字段
+- suffix 留空 = 取到短信末尾；suffix 填了但短信里找不到 = 该字段不提取（不会兜底取到文末）
+- 定位取「首次出现」的 prefix：若锚词在短信前半段已出现过，锚点必须加长到唯一
+- 只支持三个字段：pickupCode（取件码，核心）、address（取件地址）、brand（品牌签名，固定 prefix="【" suffix="】"）
+
+# 锚点的两个硬性要求（最容易出错的地方，务必照做）
+
+1. prefix 必须带上引导词，不要只写最后的那个动词
+   ✗ 错：pickupCode prefix="，凭"     → 太短，容易撞到别的句子
+   ✓ 对：pickupCode prefix="请凭取件码"
+   引导词长一点没坏处，短锚点才是灾难。
+
+2. 多个字段的锚点不要互相撞车
+   引擎对一条短信跑所有规则，然后**取提取字段最多的那条**。所以：
+   - 如果 A 规则能提 2 个字段、B 规则只能提 1 个，那么 B 能匹配的短信会被 A 抢走
+   - address 的 prefix 尤其危险：`到` 这种单字会撞上「已到站」里的「到」
+   ✗ 错：address prefix="到"
+   ✓ 对：address prefix="到咸阳"（带上地名，确保唯一）
 
 # 输出 JSON Schema（严格输出，不要任何解释文字）
 [
   {
-    "name": "快递公司/驿站名（会显示在卡片标题）",
-    "senderPattern": "发件方号码子串过滤，没把握就留空字符串",
+    "name": "快递公司/驿站名（会显示在卡片标题，如「兔喜生活」「袋鼠智柜」）",
+    "senderPattern": "",
     "fields": {
       "trackingNumber": {"prefix": "", "suffix": ""},
       "pickupCode": {"prefix": "", "suffix": ""},
@@ -58,11 +78,19 @@ class AiPromptViewModel(application: Application) : AndroidViewModel(application
     }
   }
 ]
+（trackingNumber / phone 已废弃，一律留空字符串，不要填）
+
+# 一个真实的完整例子
+
+短信：【袋鼠智柜】快递员提醒您，请凭取件码10000001到阳光小区西南门袋鼠柜A01取您的快递
+正确规则：pickupCode prefix="请凭取件码" suffix="到"，address prefix="到" suffix="取您的快递"
+→ 提取结果：码=10000001，地址=阳光小区西南门袋鼠柜A01
 
 # 要求
-- pickupCode 是核心字段，每条取件短信的规则必须能提取到；取件码形态多样（纯数字/横杠分段），锚点别把数字吃进去
-- 同一发送方可能有多种模板（到达提醒/超时催取），生成多条同名规则覆盖
+- pickupCode 是核心字段，每条取件短信的规则必须能提取到；锚点别把数字吃进去
+- 同一家公司可能有好几种模板（到达提醒 / 超时催取 / 滞留），每种模板单独一条规则，用不同 name 区分（如「袋鼠智柜·标准」「袋鼠智柜·超时」）
 - 标记「通知」的样本是反面教材：不要为它们生成规则，并确保生成的规则不会误提取它们
+- 退货/上门取件的短信里也会出现「取件码」，那是寄件不是取件，不要为它生成规则，也不要让它被已有规则误提取
 - 输出必须是合法 JSON 数组；可以带 markdown 代码围栏（导入方会自动剥除）
 
 # 我的短信样本（均为正文，已人工审查脱敏）
@@ -72,6 +100,9 @@ class AiPromptViewModel(application: Application) : AndroidViewModel(application
 
     private val ruleRepo = RuleRepository(
         (application as QuickPickApp).database.matchRuleDao()
+    )
+    private val smsRepo = com.quickpick.data.repository.SmsRepository(
+        (application as QuickPickApp).database.scannedSmsDao()
     )
 
     private val _samples = MutableStateFlow<List<SmsSample>>(emptyList())
@@ -117,9 +148,12 @@ class AiPromptViewModel(application: Application) : AndroidViewModel(application
                 return@launch
             }
             val (express, rest) = list.partition { s -> EXPRESS_KEYWORDS.any { k -> s.body.contains(k) } }
-            // 同签名（【】内容）去重：AI 要模板多样性，不要 7 条一样的兔喜
-            val expressDedup = express.distinctBy { signatureOf(it.body) }
-            val noticeDedup = rest.filter { it.body.contains("【") }.distinctBy { signatureOf(it.body) }
+            // 按「签名 + 句式骨架」去重，不能只按签名（2026-11-08 修复）：
+            // 同家公司常有多种模板（袋鼠智柜的「请凭取件码X到Y」/「您存放在X的快递Y超时未取」
+            // /「…已滞留」），只按【签名】去重会把后两种整条砍掉——AI 拿不到样本就生成不出对应规则，
+            // 结果就是用户导入 AI 规则后仍有大批短信识别不到。
+            val expressDedup = express.distinctBy { templateKeyOf(it.body) }
+            val noticeDedup = rest.filter { it.body.contains("【") }.distinctBy { templateKeyOf(it.body) }
 
             _samples.value = expressDedup.take(EXPRESS_TARGET).map { SmsSample(it.id, it.body, true) } +
                 noticeDedup.take(NOTICE_TARGET).map { SmsSample(it.id, it.body, false) }
@@ -129,9 +163,24 @@ class AiPromptViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    /** 签名（【】内容）或正文前 12 字作去重键 */
+    /** 签名（【】内容）或正文前 12 字 */
     private fun signatureOf(body: String): String =
         if (body.startsWith("【")) body.substringBefore("】") else body.take(12)
+
+    /**
+     * 模板指纹：签名 + 句式骨架（去掉所有数字和标点后的前 24 字）。
+     *
+     * 「袋鼠智柜·请凭取件码01259354到…」和「袋鼠智柜·您存放在…超时未取」签名相同、
+     * 骨架不同 → 算两种模板，都要进样本；而「…取件码01259354…」与「…取件码2946-3356…」
+     * 骨架相同 → 只留一条。这样既有模板多样性，又不会塞一堆重复。
+     */
+    private fun templateKeyOf(body: String): String {
+        val sig = signatureOf(body)
+        val skeleton = body.dropWhile { it != '】' }.drop(1)
+            .filterNot { it.isDigit() || it in "，。；、！？,.!?：: （）()【】《》\n\r\t -" }
+            .take(24)
+        return "$sig|$skeleton"
+    }
 
     fun removeSample(id: String) {
         _samples.value = _samples.value.filterNot { it.id == id }
@@ -186,6 +235,8 @@ class AiPromptViewModel(application: Application) : AndroidViewModel(application
     private suspend fun processNext() {
         val next = pendingImport.removeFirstOrNull()
         if (next == null) {
+            // 导入结束：清扫描标记，新规则才能作用于存量短信（v1.1.10 修复）
+            if (importedCount > 0) smsRepo.clearScanned()
             _events.tryEmit(
                 "导入完成：新增 $importedCount 条" +
                     if (skippedCount > 0) "，跳过 $skippedCount 条" else ""
