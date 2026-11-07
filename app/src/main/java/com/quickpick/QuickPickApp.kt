@@ -1,35 +1,19 @@
 package com.quickpick
 
 import android.app.Application
-import android.util.Log
 import com.quickpick.data.db.AppDatabase
 import com.quickpick.data.local.SettingsStore
-import com.quickpick.data.preset.PresetRules
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 
 class QuickPickApp : Application() {
 
     val database: AppDatabase by lazy { AppDatabase.getInstance(this) }
     val settingsStore: SettingsStore by lazy { SettingsStore(this) }
 
-    // SupervisorJob：种子出错不影响其他协程；带日志，不静默
-    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // v1.1.11 起不再内置任何预置规则（短信格式各家差异太大，内置规则命中率极低，
+    // 反而让用户以为「装了就该有数据」）。规则由用户自己在规则页新建或 AI 生成。
+    // 老用户库里已有的两条预置规则不自动删除——那是用户的数据，让他自己处理。
 
     override fun onCreate() {
         super.onCreate()
-        appScope.launch {
-            runCatching {
-                PresetRules.seedIfNeeded(settingsStore, database.matchRuleDao())
-                // v1.0.0 老用户：旧预置规则补 senderPattern/品牌锚点（一次性，seeded 标记后不再跑）
-                PresetRules.upgradeIfNeeded(settingsStore, database.matchRuleDao())
-                // v1.1.4：预置极简重置（去代取点锚点，只留取件码+品牌）
-                PresetRules.upgradeToV3IfNeeded(settingsStore, database.matchRuleDao())
-                // v1.1.5：发件方过滤从预置移除（端口常变不可靠）
-                PresetRules.upgradeToV4IfNeeded(settingsStore, database.matchRuleDao())
-            }.onFailure { Log.w("QuickPickApp", "预置规则没能灌入/升级", it) }
-        }
     }
 }

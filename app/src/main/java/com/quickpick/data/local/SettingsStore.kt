@@ -8,23 +8,27 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.quickpick.data.preset.PresetFlags
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.dataStore by preferencesDataStore(name = "quickpick_prefs")
 
-/** 轻量偏好存储：权限引导完成标记、预置规则灌入标记、扫描窗口、主题与玻璃底栏偏好 */
-class SettingsStore(private val context: Context) : PresetFlags {
+/** 轻量偏好存储：权限引导完成标记、扫描窗口、主题与玻璃底栏偏好 */
+class SettingsStore(private val context: Context) {
 
     companion object {
         private val KEY_ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
-        private val KEY_RULES_SEEDED = booleanPreferencesKey("rules_seeded")
-        private val KEY_PRESET_V2_SEEDED = booleanPreferencesKey("preset_v2_seeded")
-        private val KEY_PRESET_V3_SEEDED = booleanPreferencesKey("preset_v3_seeded")
-        private val KEY_PRESET_V4_SEEDED = booleanPreferencesKey("preset_v4_seeded")
+        // 预置规则已移除（v1.1.11），旧键 rules_seeded / preset_v2~v4_seeded 保留在 DataStore 里不清理：
+        // 删键要动存储结构，而残留几个布尔值没有任何影响。
         private val KEY_SCAN_WINDOW_DAYS = intPreferencesKey("scan_window_days")
+
+        /**
+         * 规则变更标记（v1.1.11）：规则一旦变化就置 true，首页回到前台时发现它
+         * 就自动全量重扫并复位。这样所有变更路径（编辑器保存 / 规则页导入 / AI 导入 /
+         * 删除规则）都能闭环，用户配完规则直接看到数据，不用自己下拉。
+         */
+        private val KEY_RULES_DIRTY = booleanPreferencesKey("rules_dirty")
 
         // 主题（v1.1.7 砍引擎：theme_engine 键废弃不迁移；seed_color 缺失 = miuix 默认板）
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
@@ -56,32 +60,18 @@ class SettingsStore(private val context: Context) : PresetFlags {
         context.dataStore.edit { it[KEY_ONBOARDING_DONE] = true }
     }
 
-    override suspend fun isRulesSeeded(): Boolean =
-        context.dataStore.data.map { it[KEY_RULES_SEEDED] ?: false }.first()
+    /** 规则变更标记：任何规则写操作后调用；首页消费后调 clearRulesDirty() */
+    val rulesDirty: Flow<Boolean> =
+        context.dataStore.data.map { it[KEY_RULES_DIRTY] ?: false }
 
-    override suspend fun setRulesSeeded() {
-        context.dataStore.edit { it[KEY_RULES_SEEDED] = true }
+    suspend fun isRulesDirty(): Boolean = rulesDirty.first()
+
+    suspend fun markRulesDirty() {
+        context.dataStore.edit { it[KEY_RULES_DIRTY] = true }
     }
 
-    override suspend fun isPresetV2Seeded(): Boolean =
-        context.dataStore.data.map { it[KEY_PRESET_V2_SEEDED] ?: false }.first()
-
-    override suspend fun setPresetV2Seeded() {
-        context.dataStore.edit { it[KEY_PRESET_V2_SEEDED] = true }
-    }
-
-    override suspend fun isPresetV3Seeded(): Boolean =
-        context.dataStore.data.map { it[KEY_PRESET_V3_SEEDED] ?: false }.first()
-
-    override suspend fun setPresetV3Seeded() {
-        context.dataStore.edit { it[KEY_PRESET_V3_SEEDED] = true }
-    }
-
-    override suspend fun isPresetV4Seeded(): Boolean =
-        context.dataStore.data.map { it[KEY_PRESET_V4_SEEDED] ?: false }.first()
-
-    override suspend fun setPresetV4Seeded() {
-        context.dataStore.edit { it[KEY_PRESET_V4_SEEDED] = true }
+    suspend fun clearRulesDirty() {
+        context.dataStore.edit { it[KEY_RULES_DIRTY] = false }
     }
 
     /** 扫描时间窗口（天） */

@@ -14,6 +14,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val packageRepo = PackageRepository(
         (application as QuickPickApp).database.packageRecordDao()
     )
+    private val smsRepo = com.quickpick.data.repository.SmsRepository(
+        (application as QuickPickApp).database.scannedSmsDao()
+    )
 
     // 偏好读写（初值与 SettingsStore 默认值一致）
     val scanWindowDays: StateFlow<Int> = settingsStore.scanWindowDays
@@ -49,11 +52,21 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val glassAlpha: StateFlow<Float> = settingsStore.glassAlpha
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.32f)
 
+    /**
+     * 改扫描窗口。
+     *
+     * v1.1.12 修复：原实现只删窗口外记录、不重新扫描。改完范围回到首页时，
+     * ON_RESUME 触发的增量扫描会把这些短信当「已处理」全跳过（它们在 scanned_sms 里），
+     * 用户看到的就是「下拉动画转了但列表没变」。
+     * 现在同时清扫描标记，下次扫描会按新窗口重新判定全部短信。
+     */
     fun setScanWindowDays(days: Int) {
         viewModelScope.launch {
             settingsStore.setScanWindowDays(days)
-            // v1.1.8：窗口变更即移除窗口外未取件（已取件历史保留）；调大时无未取件可删（幂等）
+            // 窗口调小：先移除窗口外的未取件记录（已取件历史保留）；调大时无记录可删，幂等
             packageRepo.deleteUnpickedOlderThan(System.currentTimeMillis() - days * 86400000L)
+            // 清标记让新窗口的短信被重新判定，否则增量扫描会全部跳过
+            smsRepo.clearScanned()
         }
     }
 

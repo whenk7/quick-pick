@@ -134,6 +134,42 @@ class RuleEditorViewModel(application: Application) : AndroidViewModel(applicati
         _state.value = _state.value.copy(activeField = field)
     }
 
+    /**
+     * 按字段直接写锚点（v1.1.11 修复 FieldCard 串字段）。
+     *
+     * 原实现只有「写当前激活字段」一种入口。而在真实交互里：TextField 会先消费掉点击
+     * （miuix Card 的 combinedClickable 要求 down 未被消费才触发 onClick），所以直接点
+     * 「取件地址」卡片的输入框时，activeField 仍是上一个字段（取件码）——地址内容被写进
+     * 取件码前缀，且没有任何提示。改为按字段写入，不再依赖激活态。
+     */
+    fun updatePrefix(field: ActiveField, value: String) {
+        val s = _state.value
+        _state.value = when (field) {
+            ActiveField.TRACKING -> s.copy(trackingPrefix = value)
+            ActiveField.PICKUP_CODE -> s.copy(codePrefix = value)
+            ActiveField.ADDRESS -> s.copy(addressPrefix = value)
+            ActiveField.PHONE -> s.copy(phonePrefix = value)
+            ActiveField.SENDER -> s.copy(senderPattern = value)
+            ActiveField.BRAND -> s.copy(brandPrefix = value)
+        }
+        refreshPreview()
+    }
+
+    fun updateSuffix(field: ActiveField, value: String) {
+        val s = _state.value
+        // senderPattern 是单字符串匹配，无后缀概念
+        if (field == ActiveField.SENDER) return
+        _state.value = when (field) {
+            ActiveField.TRACKING -> s.copy(trackingSuffix = value)
+            ActiveField.PICKUP_CODE -> s.copy(codeSuffix = value)
+            ActiveField.ADDRESS -> s.copy(addressSuffix = value)
+            ActiveField.PHONE -> s.copy(phoneSuffix = value)
+            ActiveField.BRAND -> s.copy(brandSuffix = value)
+            else -> s
+        }
+        refreshPreview()
+    }
+
     fun updateActiveFieldPrefix(value: String) {
         val s = _state.value
         val ns = when (s.activeField) {
@@ -252,11 +288,8 @@ class RuleEditorViewModel(application: Application) : AndroidViewModel(applicati
             } else {
                 repo.insert(rule)
             }
-            // 规则变了：清扫描标记，让存量的「已处理」短信能被新规则重新判定
-            // （否则增量扫描会全部跳过，用户改完规则看不到任何变化 — v1.1.10 修复）
-            com.quickpick.data.repository.SmsRepository(
-                (getApplication() as QuickPickApp).database.scannedSmsDao()
-            ).clearScanned()
+            // 规则变了：打标记，首页回到前台时会自动全量重扫（v1.1.11）
+            (getApplication() as QuickPickApp).settingsStore.markRulesDirty()
             // 轻提示引导下拉重扫（不弹窗打断，v1.1.5 用户裁决；v1.1.7 §3 文案精简统一）
             UiNotifier.notify("已保存「${s.ruleName}」，请首页下拉刷新")
             _savedEvents.emit(wasEdit)

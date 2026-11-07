@@ -23,7 +23,8 @@ fun EmptyState(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(48.dp),
+            // 水平内边距收紧到 24dp：48dp 会吃掉近半可显示宽度，中文引导文案容易折成碎行
+            .padding(horizontal = 24.dp, vertical = 48.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // emoji 大字：原 M3 displayMedium(45sp) 无对应 miuix token，直接给字号

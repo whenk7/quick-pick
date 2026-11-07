@@ -6,6 +6,7 @@ import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -15,11 +16,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
@@ -36,14 +39,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quickpick.ui.component.ConfirmDialog
+import com.quickpick.ui.component.InlineTextButton
 import com.quickpick.ui.theme.Background
 import com.quickpick.ui.theme.InputBackground
 import com.quickpick.ui.theme.InputFieldColors
 import com.quickpick.ui.theme.Primary
-import com.quickpick.ui.theme.PrimarySoft
 import com.quickpick.ui.theme.Surface
 import com.quickpick.ui.theme.TextPrimary
 import com.quickpick.ui.theme.TextSecondary
@@ -51,13 +57,9 @@ import com.quickpick.ui.theme.TextTertiary
 import com.quickpick.ui.viewmodel.AiPromptViewModel
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -108,109 +110,65 @@ fun AiPromptScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // 流程说明
+            // ============ 第 1 步：审查短信样本 ============
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    cornerRadius = 16.dp,
-                    colors = CardDefaults.defaultColors(color = PrimarySoft)
-                ) {
-                    Text(
-                        text = "① 审查短信样本（只有正文会被复制）→ ② 复制提示词去问任意 AI → ③ 把 AI 返回的 JSON 贴回来导入",
-                        style = MiuixTheme.textStyles.body2,
-                        color = TextPrimary,
-                        modifier = Modifier.padding(14.dp)
-                    )
-                }
+                AiStepHeader(
+                    title = "审查短信样本",
+                    hint = "上下滚动查看，含隐私的短信点 × 移除；删多了点「补齐」",
+                    trailing = if (canRefill) {
+                        {
+                            InlineTextButton(
+                                text = "补齐",
+                                onClick = { viewModel.refill() }
+                            )
+                        }
+                    } else null
+                )
             }
-
-            // ① 短信样本
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                // 定高容器 + 内部滚动：样本可能上百条，铺开会把第 2、3 步顶到屏幕外
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 180.dp, max = 360.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Surface)
                 ) {
-                    SmallTitle(text = "① 短信样本（${samples.size} 条）", modifier = Modifier.weight(1f))
-                    if (canRefill) {
-                        TextButton(
-                            text = "补齐",
-                            onClick = { viewModel.refill() },
-                            colors = ButtonDefaults.textButtonColorsPrimary()
-                        )
-                    }
-                }
-            }
-            when {
-                loadFailed -> item {
-                    Text(
-                        text = "没读到短信——请先在系统设置里允许读取短信权限",
-                        style = MiuixTheme.textStyles.body2,
-                        color = TextSecondary,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
-                }
-                samples.isEmpty() -> item {
-                    Text(
-                        text = "近 90 天没有可用的短信样本",
-                        style = MiuixTheme.textStyles.body2,
-                        color = TextTertiary,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
-                }
-                else -> items(samples, key = { it.id }) { sample ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Surface)
-                            .padding(start = 12.dp, top = 10.dp, bottom = 10.dp, end = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = if (sample.isExpress) "快递" else "通知",
-                            style = MiuixTheme.textStyles.body2,
-                            color = if (sample.isExpress) Primary else TextTertiary,
-                            modifier = Modifier
-                                .background(
-                                    if (sample.isExpress) PrimarySoft else InputBackground,
-                                    RoundedCornerShape(8.dp)
-                                )
-                                .padding(horizontal = 8.dp, vertical = 2.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = sample.body,
-                            style = MiuixTheme.textStyles.body2,
-                            color = TextPrimary,
-                            maxLines = 2,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
-                        )
-                        IconButton(
-                            onClick = { viewModel.removeSample(sample.id) },
-                            modifier = Modifier
-                                .width(40.dp)
-                                .height(40.dp)
-                                .semantics(mergeDescendants = true) { contentDescription = "移除样本" }
+                    when {
+                        loadFailed -> SampleHint("没读到短信——请先在系统设置里允许读取短信权限")
+                        samples.isEmpty() -> SampleHint("近 90 天没有可用的短信样本")
+                        else -> LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(vertical = 4.dp)
                         ) {
-                            Text("×", style = MiuixTheme.textStyles.body1, color = TextTertiary)
+                            items(samples, key = { it.id }) { sample ->
+                                SampleRow(
+                                    sample = sample,
+                                    onRemove = { viewModel.removeSample(sample.id) }
+                                )
+                            }
                         }
                     }
                 }
             }
 
-            // ② 提示词
+            // ============ 第 2 步：复制提示词 ============
             item {
-                SmallTitle(text = "② 提示词（已包含上面确认的样本）")
+                AiStepHeader(
+                    title = "复制提示词",
+                    hint = "已包含上面确认的样本。发给 AI 前请再核对一遍，确认没有敏感信息"
+                )
+            }
+            item {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(16.dp))
                         .background(InputBackground)
-                        .heightIn(max = 200.dp)
+                        .heightIn(max = 180.dp)
                         .verticalScroll(rememberScrollState())
                         .padding(12.dp)
                 ) {
@@ -220,7 +178,7 @@ fun AiPromptScreen(
                         color = TextPrimary
                     )
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
                 Button(
                     onClick = {
                         copyToClipboard(context, viewModel.buildPrompt())
@@ -229,23 +187,28 @@ fun AiPromptScreen(
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColorsPrimary()
                 ) {
-                    Text("📋 一键复制提示词")
+                    Text("一键复制提示词")
                 }
             }
 
-            // ③ 粘贴结果
+            // ============ 第 3 步：粘贴结果 ============
             item {
-                SmallTitle(text = "③ 粘贴 AI 返回的 JSON")
+                AiStepHeader(
+                    title = "粘贴 AI 返回的 JSON",
+                    hint = "把 AI 的回复整段贴进来，单个对象或数组都行"
+                )
+            }
+            item {
                 // 单源：按钮点击时直接读 TextFieldState，不回流 ViewModel
                 val fieldState = rememberTextFieldState()
                 TextField(
                     state = fieldState,
                     modifier = Modifier.fillMaxWidth(),
-                    label = "粘贴 AI 的回复（单个 JSON 或数组都行）",
+                    label = "粘贴 AI 的回复",
                     lineLimits = TextFieldLineLimits.MultiLine(minHeightInLines = 3, maxHeightInLines = 7),
                     colors = InputFieldColors
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
                 Button(
                     onClick = { viewModel.importPasted(fieldState.text.toString()) },
                     modifier = Modifier.fillMaxWidth(),
@@ -253,7 +216,7 @@ fun AiPromptScreen(
                 ) {
                     Text("检查并导入")
                 }
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
@@ -278,4 +241,68 @@ fun AiPromptScreen(
 private fun copyToClipboard(context: Context, text: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     clipboard.setPrimaryClip(ClipData.newPlainText("ai-rule-prompt", text))
+}
+
+/**
+ * 单条样本（v1.1.11 重做）：原来是「背景胶囊标签 + 两行正文 + 40dp 按钮」的三段式，
+ * 每行 ~72dp，17 条就把整页顶满。改成单行紧凑布局，行高 ~52dp。
+ *
+ * 正文保留 2 行：用户要判断「这有没有隐私」，截到 1 行看不出内容就没法审。
+ */
+@Composable
+private fun SampleRow(
+    sample: AiPromptViewModel.SmsSample,
+    onRemove: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 12.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // 类型标记压成一个小色点 + 2 字，去掉胶囊底
+        Box(
+            modifier = Modifier
+                .size(6.dp)
+                .clip(CircleShape)
+                .background(if (sample.isExpress) Primary else TextTertiary)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = sample.body,
+            style = MiuixTheme.textStyles.body2,
+            color = TextPrimary,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            lineHeight = 17.sp,
+            modifier = Modifier.weight(1f)
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        IconButton(
+            onClick = onRemove,
+            modifier = Modifier
+                .size(36.dp)
+                .semantics(mergeDescendants = true) { contentDescription = "移除这条样本" }
+        ) {
+            Text("×", style = MiuixTheme.textStyles.body1, color = TextTertiary)
+        }
+    }
+}
+
+/** 定高容器内的占位提示（无权限 / 没样本） */
+@Composable
+private fun SampleHint(text: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            style = MiuixTheme.textStyles.body2,
+            color = TextSecondary,
+            textAlign = TextAlign.Center
+        )
+    }
 }

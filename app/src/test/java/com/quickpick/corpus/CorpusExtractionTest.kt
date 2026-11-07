@@ -88,19 +88,6 @@ class CorpusExtractionTest {
     }
 
     @Test
-    fun `R6 preset rules never win on real corpus`() {
-        RAW_SMS.forEach { sms ->
-            val result = extract(sms.id)
-            if (result != null) {
-                assertTrue(
-                    result.first.name !in TestRules.presetNames,
-                    "${sms.id} 被预置规则「${result.first.name}」胜出"
-                )
-            }
-        }
-    }
-
-    @Test
     fun `R7 variants behave as designed`() {
         val failures = VARIANTS.flatMap { v -> diff(v.id, v.expected, extract(v.id)) }
         if (failures.isNotEmpty()) fail("R7 失败 ${failures.size} 处：\n" + failures.joinToString("\n"))

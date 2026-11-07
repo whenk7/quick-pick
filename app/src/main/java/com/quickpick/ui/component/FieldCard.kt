@@ -8,6 +8,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.quickpick.ui.theme.*
@@ -102,12 +103,17 @@ fun FieldCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    // 输入框被点中时也要把本卡片切成激活态（v1.1.11）：
+                    // TextField 会先消费 down 事件，Card 的 onClick 不触发，
+                    // 否则用户在地址卡里打字、「编辑中」却还标在取件码卡上。
                     TextField(
                         value = prefix,
                         onValueChange = onPrefixChange,
                         label = "前缀",
                         useLabelAsPlaceholder = true,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .onFocusChanged { if (it.isFocused) onClick() },
                         singleLine = true,
                         textStyle = MiuixTheme.textStyles.body1,
                         colors = InputFieldColors
@@ -118,7 +124,9 @@ fun FieldCard(
                         onValueChange = onSuffixChange,
                         label = "后缀",
                         useLabelAsPlaceholder = true,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .onFocusChanged { if (it.isFocused) onClick() },
                         singleLine = true,
                         textStyle = MiuixTheme.textStyles.body1,
                         colors = InputFieldColors

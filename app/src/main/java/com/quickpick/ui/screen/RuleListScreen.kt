@@ -136,7 +136,12 @@ fun RuleListScreen(
                         modifier = Modifier.padding(bottom = 4.dp)
                     )
                     Text(
-                        text = "${rules.size} 条规则，${presets.size} 个预置",
+                        text = if (presets.isEmpty()) {
+                            "${rules.size} 条规则"
+                        } else {
+                            // 老用户库里可能还留着 v1.1.10 之前的预置规则，仍要能区分
+                            "${rules.size} 条规则，${presets.size} 个预置"
+                        },
                         style = MiuixTheme.textStyles.body2,
                         color = TextSecondary,
                         modifier = Modifier.padding(bottom = 12.dp)
