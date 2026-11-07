@@ -65,6 +65,16 @@ class PackageListViewModel(
     private val _isScanning = MutableStateFlow(false)
     val isScanning: StateFlow<Boolean> = _isScanning
 
+    /**
+     * 下拉刷新指示器的显隐（v1.1.12）。
+     *
+     * 不能直接复用 isScanning：进入页面/切回前台会自动跑一次增量扫描，
+     * 那会儿下拉动画会凭空转一圈，用户以为「我下拉了但没数据」。
+     * 只有用户主动下拉才置 true，扫描结束即复位。
+     */
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing
+
     /** 是否有短信权限。由 UI 在进入页面/回到前台时调用 refreshPermissionState() 刷新 */
     private val _hasPermission = MutableStateFlow(false)
     val hasPermission: StateFlow<Boolean> = _hasPermission
@@ -159,20 +169,43 @@ class PackageListViewModel(
                 _events.tryEmit("没能完成扫描，请稍后再试～")
             } finally {
                 _isScanning.value = false
+                // 扫描期间被登记的全量重扫，现在补跑（见 refresh() 注释）
+                if (_pendingFullRescan) {
+                    _pendingFullRescan = false
+                    smsRepo.clearScanned()
+                    scanSms(removeUnmatched = true)
+                } else {
+                    // 没有后续扫描才复位下拉动画，否则补跑那轮结束时还要再复位一次
+                    _isRefreshing.value = false
+                }
             }
         }
     }
 
-    /** 手动全量重扫（下拉刷新）：清空已扫标记后重扫 */
+    /**
+     * 手动全量重扫（下拉刷新）：清空已扫标记后重扫。
+     *
+     * 扫描在途时不能直接丢弃请求（v1.1.12 修复）：进入页面/切回前台会自动触发一次
+     * 增量 scanSms()，这期间用户下拉，旧实现直接 return@launch —— 动画照转、列表纹丝不动，
+     * 看起来就是「下拉没反应」。现在改为登记一个待执行的全量重扫，等当前扫描结束后补跑。
+     */
     fun refresh() {
         viewModelScope.launch {
-            // 扫描在途时不清标记：否则 clearScanned 后 scanSms 直接 return，
-            // 下次扫描会把在途那轮已处理的短信再处理一遍
-            if (_isScanning.value) return@launch
+            if (_isScanning.value) {
+                // 在途时不打断当前扫描，只挂一个待办；scanSms 的 finally 会消费它
+                _pendingFullRescan = true
+                _isRefreshing.value = true
+                return@launch
+            }
+            _isRefreshing.value = true
             smsRepo.clearScanned()
             scanSms(removeUnmatched = true)
         }
     }
+
+    /** 是否有一次全量重扫在排队（扫描在途时被下拉请求登记） */
+    @Volatile
+    private var _pendingFullRescan = false
 
     fun togglePickedUp(record: PackageRecord) {
         viewModelScope.launch {

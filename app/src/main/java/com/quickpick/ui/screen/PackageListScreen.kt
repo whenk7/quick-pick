@@ -46,6 +46,7 @@ fun PackageListScreen(
     val ruleCount by viewModel.ruleCount.collectAsStateWithLifecycle()
     val scannedCount by viewModel.scannedCount.collectAsStateWithLifecycle()
     val isScanning by viewModel.isScanning.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val hasPermission by viewModel.hasPermission.collectAsStateWithLifecycle()
     val collapsedDays by viewModel.collapsedDays.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -138,7 +139,7 @@ fun PackageListScreen(
             // 渲染 PullToRefresh，一旦列表为空就彻底没有重扫入口，规则导入后无法触发全量重扫，
             // 只能卸载重装。空态内容用可滚动容器撑满，否则没有可拖拽的内容）。
             PullToRefresh(
-                isRefreshing = isScanning,
+                isRefreshing = isRefreshing,
                 onRefresh = { viewModel.refresh() },
                 modifier = Modifier.weight(1f),
                 color = Primary,

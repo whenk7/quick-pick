@@ -46,9 +46,16 @@ class PackageRepository(private val dao: PackageRecordDao) {
         // 不依赖单号有无——无单号规则命中的短信此前每次刷新都会重复插入
         val smsId = record.smsId
         if (smsId != null) {
-            val existing = dao.findBySmsId(smsId)
+            // 查重要连归并历史一起查（v1.1.11 修复）：归并后旧短信 id 只活在 mergedSmsIds 里，
+            // 全量重扫再次读到它时 findBySmsId 查不到，会被当成新包裹再插一条。
+            val existing = dao.findByAnySmsId(smsId)
             if (existing != null) {
-                // 迁移后老记录的新列（threadId v2 / sender v3）为 NULL，重扫命中查重时回填，
+                if (existing.smsId != smsId) {
+                    // 命中归并历史：这条短信已被更完整的记录吸收（sms_id 已被新短信顶替），
+                    // 不再单独入库——否则全量重扫会把它当新包裹再插一条（v1.1.11 修复）
+                    return
+                }
+                // 同一条短信重复命中：只补齐迁移后为 NULL 的新列（threadId v2 / sender v3），
                 // 否则升级用户的历史记录永远看不到「查看短信」/发件人（spec §九「重扫后补齐」）
                 val needThread = existing.smsThreadId == null && record.smsThreadId != null
                 val needSender = existing.smsSender == null && record.smsSender != null
@@ -72,10 +79,17 @@ class PackageRepository(private val dao: PackageRecordDao) {
                 }
                 // 全量重扫按时间倒序处理，旧短信后到——不许用旧取件码覆盖新记录
                 if (existing.smsTimestamp >= record.smsTimestamp) return
-                // 覆盖时把被顶掉的旧短信 id 收进 mergedSmsIds（删除时全忽略，防重扫复活）
+                // 换柜覆盖（v1.1.11 修复）：原实现用 record.toEntity() 整行重建，
+                // isPickedUp 落回默认 false —— 用户已标的「已取件」会被新短信翻回待取，
+                // 且新短信缺的地址/电话会把旧值冲成 null。这里显式保留既有状态与更完整的字段。
                 dao.update(
                     record.toEntity().copy(
-                        id = existing.id, createdAt = existing.createdAt,
+                        id = existing.id,
+                        createdAt = existing.createdAt,
+                        isPickedUp = existing.isPickedUp,
+                        address = record.address ?: existing.address,
+                        phone = record.phone ?: existing.phone,
+                        // 覆盖时把被顶掉的旧短信 id 收进 mergedSmsIds（删除时全忽略，防重扫复活）
                         mergedSmsIds = encodeMerged(decodeMerged(existing.mergedSmsIds) + listOfNotNull(existing.smsId))
                     )
                 )

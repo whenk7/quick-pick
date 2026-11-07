@@ -20,6 +20,17 @@ interface PackageRecordDao {
     @Query("SELECT * FROM package_records WHERE sms_id = :smsId LIMIT 1")
     suspend fun findBySmsId(smsId: String): PackageRecordEntity?
 
+    /**
+     * 按短信 id 查重，**连同归并历史一起找**（v1.1.11 修复）。
+     *
+     * 归并/换柜覆盖后，旧短信 id 只存在 merged_sms_ids（JSON）里，sms_id 已被新短信顶替。
+     * 全量重扫时那条旧短信会再次被读到：findBySmsId 查不到 → 按「已取件同码 = 新包裹」
+     * 又插一条，用户看到重复记录。用 LIKE 粗筛（JSON 里 ID 是带引号的字符串，
+     * 用 '"id"' 形式避免 123 命中 1234），再在仓库层做精确校验。
+     */
+    @Query("SELECT * FROM package_records WHERE sms_id = :smsId OR merged_sms_ids LIKE '%\"' || :smsId || '\"%'")
+    suspend fun findByAnySmsId(smsId: String): PackageRecordEntity?
+
     /** 同码未取件记录（重复/催取提醒归并判定用；码会循环复用，已取件记录不参与归并） */
     @Query("SELECT * FROM package_records WHERE pickup_code = :code AND is_picked_up = 0 ORDER BY sms_timestamp DESC LIMIT 1")
     suspend fun findUnpickedByCode(code: String): PackageRecordEntity?

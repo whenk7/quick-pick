@@ -184,8 +184,8 @@ fun RuleEditorScreen(
                         state = fieldState(state, ActiveField.PICKUP_CODE),
                         prefix = state.codePrefix,
                         suffix = state.codeSuffix,
-                        onPrefixChange = { viewModel.updateActiveFieldPrefix(it) },
-                        onSuffixChange = { viewModel.updateActiveFieldSuffix(it) },
+                        onPrefixChange = { viewModel.updatePrefix(ActiveField.PICKUP_CODE, it) },
+                        onSuffixChange = { viewModel.updateSuffix(ActiveField.PICKUP_CODE, it) },
                         onClick = { viewModel.setActiveField(ActiveField.PICKUP_CODE) }
                     )
                 }
@@ -196,8 +196,8 @@ fun RuleEditorScreen(
                         state = fieldState(state, ActiveField.ADDRESS),
                         prefix = state.addressPrefix,
                         suffix = state.addressSuffix,
-                        onPrefixChange = { viewModel.updateActiveFieldPrefix(it) },
-                        onSuffixChange = { viewModel.updateActiveFieldSuffix(it) },
+                        onPrefixChange = { viewModel.updatePrefix(ActiveField.ADDRESS, it) },
+                        onSuffixChange = { viewModel.updateSuffix(ActiveField.ADDRESS, it) },
                         onClick = { viewModel.setActiveField(ActiveField.ADDRESS) }
                     )
                 }
@@ -208,8 +208,8 @@ fun RuleEditorScreen(
                         state = fieldState(state, ActiveField.BRAND),
                         prefix = state.brandPrefix,
                         suffix = state.brandSuffix,
-                        onPrefixChange = { viewModel.updateActiveFieldPrefix(it) },
-                        onSuffixChange = { viewModel.updateActiveFieldSuffix(it) },
+                        onPrefixChange = { viewModel.updatePrefix(ActiveField.BRAND, it) },
+                        onSuffixChange = { viewModel.updateSuffix(ActiveField.BRAND, it) },
                         onClick = { viewModel.setActiveField(ActiveField.BRAND) }
                     )
                 }

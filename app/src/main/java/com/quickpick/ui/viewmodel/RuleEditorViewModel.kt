@@ -134,6 +134,42 @@ class RuleEditorViewModel(application: Application) : AndroidViewModel(applicati
         _state.value = _state.value.copy(activeField = field)
     }
 
+    /**
+     * 按字段直接写锚点（v1.1.11 修复 FieldCard 串字段）。
+     *
+     * 原实现只有「写当前激活字段」一种入口。而在真实交互里：TextField 会先消费掉点击
+     * （miuix Card 的 combinedClickable 要求 down 未被消费才触发 onClick），所以直接点
+     * 「取件地址」卡片的输入框时，activeField 仍是上一个字段（取件码）——地址内容被写进
+     * 取件码前缀，且没有任何提示。改为按字段写入，不再依赖激活态。
+     */
+    fun updatePrefix(field: ActiveField, value: String) {
+        val s = _state.value
+        _state.value = when (field) {
+            ActiveField.TRACKING -> s.copy(trackingPrefix = value)
+            ActiveField.PICKUP_CODE -> s.copy(codePrefix = value)
+            ActiveField.ADDRESS -> s.copy(addressPrefix = value)
+            ActiveField.PHONE -> s.copy(phonePrefix = value)
+            ActiveField.SENDER -> s.copy(senderPattern = value)
+            ActiveField.BRAND -> s.copy(brandPrefix = value)
+        }
+        refreshPreview()
+    }
+
+    fun updateSuffix(field: ActiveField, value: String) {
+        val s = _state.value
+        // senderPattern 是单字符串匹配，无后缀概念
+        if (field == ActiveField.SENDER) return
+        _state.value = when (field) {
+            ActiveField.TRACKING -> s.copy(trackingSuffix = value)
+            ActiveField.PICKUP_CODE -> s.copy(codeSuffix = value)
+            ActiveField.ADDRESS -> s.copy(addressSuffix = value)
+            ActiveField.PHONE -> s.copy(phoneSuffix = value)
+            ActiveField.BRAND -> s.copy(brandSuffix = value)
+            else -> s
+        }
+        refreshPreview()
+    }
+
     fun updateActiveFieldPrefix(value: String) {
         val s = _state.value
         val ns = when (s.activeField) {

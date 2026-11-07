@@ -42,6 +42,10 @@ class PackageRepositoryTest {
 
         override suspend fun findBySmsId(smsId: String) = store.firstOrNull { it.smsId == smsId }
 
+        override suspend fun findByAnySmsId(smsId: String) = store.firstOrNull { e ->
+            e.smsId == smsId || PackageRepository.decodeMerged(e.mergedSmsIds).contains(smsId)
+        }
+
         override suspend fun findUnpickedByCode(code: String) =
             store.filter { it.pickupCode == code && !it.isPickedUp }.maxByOrNull { it.smsTimestamp }
 
