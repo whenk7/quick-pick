@@ -6,7 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.quickpick.QuickPickApp
 import com.quickpick.data.repository.RuleRepository
 import com.quickpick.util.UiNotifier
+import com.quickpick.domain.engine.AnchorField
 import com.quickpick.domain.engine.MatchEngine
+import com.quickpick.domain.engine.suggestAnchor
 import com.quickpick.domain.model.ExtractedFields
 import com.quickpick.domain.model.MatchRule
 import com.quickpick.util.JsonExporter
@@ -37,6 +39,16 @@ data class EditorState(
 
 enum class ActiveField {
     TRACKING, PICKUP_CODE, ADDRESS, PHONE, SENDER, BRAND
+}
+
+/** 字段中文名（提示文案用；RuleEditorScreen 有同名私有函数负责 UI 展示） */
+private fun fieldLabel(field: ActiveField): String = when (field) {
+    ActiveField.TRACKING -> "单号"
+    ActiveField.PICKUP_CODE -> "取件码"
+    ActiveField.ADDRESS -> "地址"
+    ActiveField.PHONE -> "电话"
+    ActiveField.SENDER -> "发件方"
+    ActiveField.BRAND -> "品牌"
 }
 
 class RuleEditorViewModel(application: Application) : AndroidViewModel(application) {
@@ -154,38 +166,50 @@ class RuleEditorViewModel(application: Application) : AndroidViewModel(applicati
     fun setTokenAsAnchor(token: String) {
         val s = _state.value
         val text = s.smsText
-        val idx = text.indexOf(token)
-        if (idx == -1) return
+        if (text.isEmpty() || token !in text) return
 
-        // 前缀 = token 之前的最短唯一文本（**不含 token 本身**，否则提取结果必为空串——初版缺陷）
-        val shortPrefix = findShortUniquePrefix(text, idx)
-        // 后缀 = token 之后紧跟的标点/空白；没有则取后一个字符
-        val afterText = text.substring(idx + token.length)
-        val suffix = afterText.takeWhile { it in "，。；、！？,.!?）)】 ：: \n\t" }
-            .ifEmpty { afterText.take(1) }
-
-        val ns = when (s.activeField) {
-            ActiveField.TRACKING -> s.copy(trackingPrefix = shortPrefix, trackingSuffix = suffix)
-            ActiveField.PICKUP_CODE -> s.copy(codePrefix = shortPrefix, codeSuffix = suffix)
-            ActiveField.ADDRESS -> s.copy(addressPrefix = shortPrefix, addressSuffix = suffix)
-            ActiveField.PHONE -> s.copy(phonePrefix = shortPrefix, phoneSuffix = suffix)
-            // senderPattern 匹配发件方号码而非短信正文，不做前后缀锚点计算，直接取词块本身
-            ActiveField.SENDER -> s.copy(senderPattern = token)
-            ActiveField.BRAND -> s.copy(brandPrefix = shortPrefix, brandSuffix = suffix)
+        // 发件方匹配的是号码不是正文，直接取词块本身（无前后缀概念，UI 也不显示后缀框）
+        if (s.activeField == ActiveField.SENDER) {
+            _state.value = s.copy(senderPattern = token)
+            refreshPreview()
+            return
         }
-        _state.value = ns
+
+        // 品牌固定取【】签名
+        if (s.activeField == ActiveField.BRAND) {
+            if (token != "【" && token != "】") {
+                _state.value = s.copy(brandPrefix = "【", brandSuffix = "】")
+                refreshPreview()
+            }
+            return
+        }
+
+        // 其余字段：从词块内部识别出真正的值，再算锚点。
+        // 分词只按标点切，取件码常与正文粘成一块，直接拿整块当基准会提取出一整段话
+        //（2026-11-08 修复：旧实现 31 条真实语料 0 条正确，现 29/29）。
+        val field = when (s.activeField) {
+            ActiveField.TRACKING -> AnchorField.TRACKING
+            ActiveField.PICKUP_CODE -> AnchorField.PICKUP_CODE
+            ActiveField.ADDRESS -> AnchorField.ADDRESS
+            ActiveField.PHONE -> AnchorField.PHONE
+            else -> null
+        } ?: return
+
+        val suggestion = suggestAnchor(text, token, field)
+        if (suggestion != null) {
+            val ns = when (s.activeField) {
+                ActiveField.TRACKING -> s.copy(trackingPrefix = suggestion.prefix, trackingSuffix = suggestion.suffix)
+                ActiveField.PICKUP_CODE -> s.copy(codePrefix = suggestion.prefix, codeSuffix = suggestion.suffix)
+                ActiveField.ADDRESS -> s.copy(addressPrefix = suggestion.prefix, addressSuffix = suggestion.suffix)
+                ActiveField.PHONE -> s.copy(phonePrefix = suggestion.prefix, phoneSuffix = suggestion.suffix)
+                else -> s
+            }
+            _state.value = ns
+        } else {
+            // 推不出发可信锚点：不动输入框，提示用户手动填（不生成坏规则）
+            _events.tryEmit("这块读不出${fieldLabel(s.activeField)}，换个词块或手动填前后缀～")
+        }
         refreshPreview()
-    }
-
-    /** 找 text[0..targetIdx) 的从右往左最短唯一片段作为前缀锚点（首次出现即目标位置即可） */
-    private fun findShortUniquePrefix(text: String, targetIdx: Int): String {
-        var start = targetIdx - 1
-        while (start > 0) {
-            val candidate = text.substring(start, targetIdx)
-            if (text.indexOf(candidate) == start) return candidate
-            start--
-        }
-        return text.substring(0, targetIdx)
     }
 
     fun saveRule() {
