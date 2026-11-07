@@ -51,16 +51,9 @@ class PackageListViewModel(
     val unpickedCount: StateFlow<Int> = packageRepo.observeUnpickedCount()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    val ruleCount: StateFlow<Int> = ruleRepo.observeAll()
-        .map { it.size }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
-
     /** 扫描窗口天数（首页副标题「· 近三月」用，v1.1.7 §8） */
     val scanWindowDays: StateFlow<Int> = settingsStore.scanWindowDays
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 7)
-
-    private val _scannedCount = MutableStateFlow(0)
-    val scannedCount: StateFlow<Int> = _scannedCount
 
     private val _isScanning = MutableStateFlow(false)
     val isScanning: StateFlow<Boolean> = _isScanning
@@ -87,13 +80,23 @@ class PackageListViewModel(
     private val _events = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val events: SharedFlow<String> = _events
 
-    /** UI 在进入页面与 ON_RESUME 时调用：刷新权限状态，有权限则增量扫描 */
+    /** UI 在进入页面与 ON_RESUME 时调用：刷新权限状态，有权限则扫描 */
     fun refreshPermissionState() {
         val granted = ContextCompat.checkSelfPermission(
             getApplication(), Manifest.permission.READ_SMS
         ) == PackageManager.PERMISSION_GRANTED
         _hasPermission.value = granted
-        if (granted) scanSms()
+        if (!granted) return
+        // 规则刚变过（新建/编辑/导入/删除/AI 导入）→ 跑一次全量重扫，
+        // 这样用户配完规则回首页就能看到数据，不用自己下拉（v1.1.11）
+        viewModelScope.launch {
+            if (settingsStore.isRulesDirty()) {
+                settingsStore.clearRulesDirty()
+                refresh()
+            } else {
+                scanSms()
+            }
+        }
     }
 
     /**
@@ -117,7 +120,6 @@ class PackageListViewModel(
                 val days = settingsStore.scanWindowDays.first()
                 val cutoffMs = System.currentTimeMillis() - days * 86400000L
                 val messages = SmsReader.readSince(getApplication(), cutoffMs)
-                _scannedCount.value = smsRepo.scannedCount()
 
                 val rules = ruleRepo.getAll()
                 if (rules.isEmpty()) {
@@ -160,7 +162,6 @@ class PackageListViewModel(
                     }
                     smsRepo.markScanned(sms.id)
                 }
-                _scannedCount.value = smsRepo.scannedCount()
             } catch (e: SecurityException) {
                 // 扫描过程中权限被系统回收
                 _hasPermission.value = false

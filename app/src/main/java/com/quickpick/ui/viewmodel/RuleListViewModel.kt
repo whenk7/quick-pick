@@ -15,30 +15,24 @@ class RuleListViewModel(application: Application) : AndroidViewModel(application
     private val repo = RuleRepository(
         (application as QuickPickApp).database.matchRuleDao()
     )
-    private val smsRepo = com.quickpick.data.repository.SmsRepository(
-        (application as QuickPickApp).database.scannedSmsDao()
-    )
+    private val settingsStore = (application as QuickPickApp).settingsStore
 
     val rules: StateFlow<List<MatchRule>> = repo.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     /**
-     * 规则变化后必须让全量重扫可再次发生（v1.1.10 修复）。
+     * 规则变更后打标记（v1.1.11）：首页 ON_RESUME 看到它就跑全量重扫并复位。
      *
-     * 原实现只靠「首页下拉」触发 refresh()，而空态首页没有下拉入口（已同批修复）；
-     * 更关键的是：导入/删除规则时若不重置 scanned 标记，增量扫描会把所有旧短信当成
-     * 「已处理」直接跳过——用户导入规则后看到的一直是空列表，只有卸载重装才能恢复。
+     * 为什么不在写库时直接清 scanned_sms：清完没人扫，用户回首页看到的还是旧列表。
+     * 统一交给首页消费，所有变更路径（这里 / 编辑器 / AI 页）行为一致。
      */
-    private fun invalidateScanCache() {
-        viewModelScope.launch { smsRepo.clearScanned() }
+    private fun markRulesChanged() {
+        viewModelScope.launch { settingsStore.markRulesDirty() }
     }
 
     fun deleteRule(rule: MatchRule) {
-        viewModelScope.launch {
-            repo.deleteById(rule.id)
-            // 删规则 = 少了一种匹配可能，清标记让下次扫描重新判定（已取件记录不受影响）
-            smsRepo.clearScanned()
-        }
+        viewModelScope.launch { repo.deleteById(rule.id) }
+        markRulesChanged()
     }
 
     // ============ 导入导出（v1.1.4 从设置页挪入，规则归规则页管） ============
@@ -90,8 +84,8 @@ class RuleListViewModel(application: Application) : AndroidViewModel(application
     private suspend fun processNext() {
         val next = pendingImport.removeFirstOrNull()
         if (next == null) {
-            // 导入结束：清扫描标记，否则新规则对存量短信永远不生效（v1.1.10 修复）
-            if (importedCount > 0) smsRepo.clearScanned()
+            // 导入结束：打规则变更标记，首页回来会自动全量重扫（v1.1.11）
+            if (importedCount > 0) settingsStore.markRulesDirty()
             _events.tryEmit(
                 "导入完成：新增 $importedCount 条" +
                     if (skippedCount > 0) "，跳过 $skippedCount 条" else ""

@@ -288,11 +288,8 @@ class RuleEditorViewModel(application: Application) : AndroidViewModel(applicati
             } else {
                 repo.insert(rule)
             }
-            // 规则变了：清扫描标记，让存量的「已处理」短信能被新规则重新判定
-            // （否则增量扫描会全部跳过，用户改完规则看不到任何变化 — v1.1.10 修复）
-            com.quickpick.data.repository.SmsRepository(
-                (getApplication() as QuickPickApp).database.scannedSmsDao()
-            ).clearScanned()
+            // 规则变了：打标记，首页回到前台时会自动全量重扫（v1.1.11）
+            (getApplication() as QuickPickApp).settingsStore.markRulesDirty()
             // 轻提示引导下拉重扫（不弹窗打断，v1.1.5 用户裁决；v1.1.7 §3 文案精简统一）
             UiNotifier.notify("已保存「${s.ruleName}」，请首页下拉刷新")
             _savedEvents.emit(wasEdit)

@@ -104,6 +104,7 @@ class AiPromptViewModel(application: Application) : AndroidViewModel(application
     private val smsRepo = com.quickpick.data.repository.SmsRepository(
         (application as QuickPickApp).database.scannedSmsDao()
     )
+    private val settingsStore = (application as QuickPickApp).settingsStore
 
     private val _samples = MutableStateFlow<List<SmsSample>>(emptyList())
     val samples: StateFlow<List<SmsSample>> = _samples
@@ -235,8 +236,8 @@ class AiPromptViewModel(application: Application) : AndroidViewModel(application
     private suspend fun processNext() {
         val next = pendingImport.removeFirstOrNull()
         if (next == null) {
-            // 导入结束：清扫描标记，新规则才能作用于存量短信（v1.1.10 修复）
-            if (importedCount > 0) smsRepo.clearScanned()
+            // 导入结束：打规则变更标记，回首页自动全量重扫（v1.1.11）
+            if (importedCount > 0) settingsStore.markRulesDirty()
             _events.tryEmit(
                 "导入完成：新增 $importedCount 条" +
                     if (skippedCount > 0) "，跳过 $skippedCount 条" else ""

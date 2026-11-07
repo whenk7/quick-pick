@@ -1,6 +1,5 @@
 package com.quickpick.corpus
 
-import com.quickpick.data.preset.PresetRules
 import com.quickpick.domain.model.MatchRule
 
 /**
@@ -97,22 +96,12 @@ object TestRules {
         ),
     )
 
-    /** 生产预置规则（顺丰/京东），映射为 domain 模型参与全量语料交叉验证 */
-    val presets: List<MatchRule> = PresetRules.all.map { e ->
-        MatchRule(
-            id = e.id, name = e.name, isPreset = e.isPreset,
-            trackingPrefix = e.trackingPrefix, trackingSuffix = e.trackingSuffix,
-            codePrefix = e.codePrefix, codeSuffix = e.codeSuffix,
-            addressPrefix = e.addressPrefix, addressSuffix = e.addressSuffix,
-            phonePrefix = e.phonePrefix, phoneSuffix = e.phoneSuffix,
-            senderPattern = e.senderPattern,
-            brandPrefix = e.brandPrefix, brandSuffix = e.brandSuffix,
-            sampleSms = e.sampleSms
-        )
-    }
+    /**
+     * v1.1.11 起应用不再内置预置规则（短信格式各家差异太大，内置命中率极低）。
+     * 这里保留一个空列表以维持测试结构，方便将来真要加内置规则时直接塞进来。
+     */
+    val presets: List<MatchRule> = emptyList()
 
-    val presetNames: Set<String> get() = presets.map { it.name }.toSet()
-
-    /** 模拟真实用户环境：自建规则 + 预置规则同时在场 */
+    /** 模拟真实用户环境（当前 = 只有用户自建规则） */
     val allWithPresets: List<MatchRule> get() = all + presets
 }

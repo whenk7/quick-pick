@@ -100,18 +100,18 @@ class ScanCacheInvalidationTest {
         val scanned = FakeScannedDao()
         val packages = FakePackageDao()
 
-        // 第一次扫描：只有 2 条预置规则。带「取货码」的几条会被京东规则蒙对，其余全漏。
-        // 但所有短信都会被标为「已扫」——这正是现场故障的起点。
-        val presets = TestRules.presets
-        val firstRound = scan(scanned, packages, presets)
+        // 第一次扫描：还没有任何规则（v1.1.11 起不再内置预置规则）。
+        // 一条都匹配不上，但所有短信都会被标为「已扫」——这正是现场故障的起点。
+        val firstRound = scan(scanned, packages, emptyList())
         assertEquals(RAW_SMS.size, scanned.ids.size, "所有短信都被标为已扫描")
+        assertEquals(0, firstRound)
         val afterFirst = packages.store.size
-        assertTrue(firstRound <= 4, "预置规则最多蒙中 4 条，实际 $firstRound")
+        assertEquals(0, afterFirst)
 
-        // 导入用户规则，但**不清标记**（修复前的行为）→ 增量扫描把剩下的全跳过
+        // 用户随后在规则页配好规则，但**不清标记**（修复前的行为）→ 增量扫描全跳过
         val userRules = TestRules.all
         assertEquals(0, scan(scanned, packages, userRules), "不清标记时新规则完全失效（现场故障）")
-        assertEquals(afterFirst, packages.store.size, "记录数一点没变，用户看到的就是空/残缺列表")
+        assertEquals(afterFirst, packages.store.size, "记录数一点没变，用户看到的就是空列表")
     }
 
     @Test
@@ -119,14 +119,16 @@ class ScanCacheInvalidationTest {
         val scanned = FakeScannedDao()
         val packages = FakePackageDao()
 
-        scan(scanned, packages, TestRules.presets)
+        // 无规则时扫一遍，全部短信进标记表
+        scan(scanned, packages, emptyList())
+        assertEquals(0, packages.store.size)
 
-        // 修复后的行为：导入结束时 clearScanned() → 下一轮重新判定
+        // 修复后的行为：规则变更时 clearScanned() → 下一轮重新判定
         scanned.clearAll()
         scan(scanned, packages, TestRules.all)
 
         // 32 条快递语料：E031 是负例（不该提取），同码的会归并成一条，
-        // 所以入库数少于 31 是正常语义，关键是从「预置蒙中的几条」跳到「几乎全部」。
+        // 所以入库数少于 31 是正常语义，关键是从 0 跳到「几乎全部」。
         assertTrue(
             packages.store.size >= 25,
             "清标记后应扫出绝大部分快递短信，实际 ${packages.store.size}"

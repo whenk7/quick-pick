@@ -259,10 +259,7 @@ fun MainScreen(
                     )
                 }
                 currentTab == BottomTab.PACKAGES -> {
-                    PackageListScreen(
-                        viewModel = packageViewModel,
-                        onGoToRules = { currentTab = BottomTab.RULES }
-                    )
+                    PackageListScreen(viewModel = packageViewModel)
                 }
                 currentTab == BottomTab.RULES -> {
                     RuleListScreen(

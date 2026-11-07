@@ -37,14 +37,9 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
-fun PackageListScreen(
-    viewModel: PackageListViewModel,
-    onGoToRules: () -> Unit
-) {
+fun PackageListScreen(viewModel: PackageListViewModel) {
     val packages by viewModel.packages.collectAsStateWithLifecycle()
     val unpickedCount by viewModel.unpickedCount.collectAsStateWithLifecycle()
-    val ruleCount by viewModel.ruleCount.collectAsStateWithLifecycle()
-    val scannedCount by viewModel.scannedCount.collectAsStateWithLifecycle()
     val isScanning by viewModel.isScanning.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val hasPermission by viewModel.hasPermission.collectAsStateWithLifecycle()
@@ -176,42 +171,15 @@ fun PackageListScreen(
                         modifier = Modifier.fillMaxSize()
                     )
                 }
-                packages.isEmpty() && ruleCount == 0 -> {
-                    // 无规则（edge-cases 三）：引导去规则页
-                    EmptyState(
-                        emoji = "🧩",
-                        title = "还没有匹配规则",
-                        description = "添加规则后才能提取快递信息",
-                        modifier = Modifier.fillMaxSize(),
-                        action = {
-                            Button(
-                                onClick = onGoToRules,
-                                colors = ButtonDefaults.buttonColorsPrimary()
-                            ) {
-                                Text("去看看规则", color = Color.White)
-                            }
-                        }
-                    )
-                }
-                packages.isEmpty() && scannedCount == 0 -> {
-                    // 收件箱空 / 还没扫过
-                    EmptyState(
-                        emoji = "📦",
-                        title = "还没有快递消息",
-                        description = "坐等包裹到来～\n也可以下拉手动刷新",
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
                 packages.isEmpty() -> {
-                    // 扫过但 0 匹配：引导加规则
+                    // 无数据（v1.1.11）：合并原先「无规则」「扫过但 0 匹配」两个分支——
+                    // 对用户是同一件事（没数据），且定位都在规则页，没必要分两套文案。
+                    // 不放按钮：全站只有三个 tab，规则入口在底栏，加按钮反而冗余。
                     EmptyState(
                         emoji = "🔎",
-                        title = "暂未发现快递短信",
-                        description = "可以试试添加匹配规则，或下拉刷新",
-                        modifier = Modifier.fillMaxSize(),
-                        action = {
-                            InlineTextButton(text = "添加规则", onClick = onGoToRules)
-                        }
+                        title = "还没有识别到快递",
+                        description = "请到「规则」页配规则\n「新建」手动配置，「AI 生成」交给 AI",
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
                 else -> {
