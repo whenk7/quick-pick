@@ -16,9 +16,62 @@ val Primary: Color @Composable @ReadOnlyComposable get() = MiuixTheme.colorSchem
 
 // 背景
 val Background: Color @Composable @ReadOnlyComposable get() = MiuixTheme.colorScheme.background
-val Surface: Color @Composable @ReadOnlyComposable get() = MiuixTheme.colorScheme.surface
-val SurfaceDone: Color @Composable @ReadOnlyComposable get() = MiuixTheme.colorScheme.surfaceContainerHigh
+
+/**
+ * 卡片底：**保证与页面底始终有一档色差**（v1.1.15）。
+ *
+ * 原实现直取 `colorScheme.surface`，在内置板上侥幸成立（浅色 #F7F7F7 落在
+ * #FFFFFF 页面上），但 Monet 板按 M3 规范让 background 与 surface 取同一 tone，
+ * 两者同色 → 卡片只剩下 2dp 阴影，在浅紫底上几乎看不见，整页融成一坨。
+ * 内置板里 surfaceContainer / surfaceVariant 同样与 background 同色（浅深两套都是），
+ * 所以不能靠换令牌解决，必须在**取值时**兜底。
+ *
+ * 判据用感知亮度差：够用就用原色（保留内置板既有观感，深色 #000000 卡片不变），
+ * 不够就朝 onSurface 方向混 5% 造出台阶。
+ */
+val Surface: Color
+    @Composable @ReadOnlyComposable get() = ensureVisibleOverBackground(
+        MiuixTheme.colorScheme.surface,
+        MiuixTheme.colorScheme.background,
+        MiuixTheme.colorScheme.onBackground
+    )
+
+/** 已取件卡（低存在感底）：同 Surface 的兜底逻辑——内置板深色 surfaceContainerHigh 与页面同色 */
+val SurfaceDone: Color
+    @Composable @ReadOnlyComposable get() = ensureVisibleOverBackground(
+        MiuixTheme.colorScheme.surfaceContainerHigh,
+        MiuixTheme.colorScheme.background,
+        MiuixTheme.colorScheme.onBackground
+    )
+
 val InputBackground: Color @Composable @ReadOnlyComposable get() = MiuixTheme.colorScheme.surfaceVariant
+
+/** 感知亮度（sRGB 加权，够用于「肉眼能不能看出台阶」的判断） */
+private fun Color.perceivedLuminance(): Float = 0.299f * red + 0.587f * green + 0.114f * blue
+
+/**
+ * 最小可见亮度差。
+ *
+ * 内置板浅色的 surface(#F7F7F7) 与 background(#FFFFFF) 实测差 0.0314，
+ * 阈值必须低于它（否则内置板也会被改色，动到既有观感）；Monet 板下两者差 ~0
+ * 必然触发兜底。取 0.025 留出余量，不吃浮点误差。
+ */
+private const val MIN_LUMINANCE_STEP = 0.025f
+
+/**
+ * 与页面底色差不足时，朝 [topColor] 方向混入 5% 造出台阶。
+ * 混入比固定色值安全：浅色底朝黑走、深色底朝白走，方向自动正确，不写死任何色值。
+ */
+private fun ensureVisibleOverBackground(
+    color: Color,
+    background: Color,
+    topColor: Color
+): Color {
+    if (kotlin.math.abs(color.perceivedLuminance() - background.perceivedLuminance()) >= MIN_LUMINANCE_STEP) {
+        return color
+    }
+    return topColor.copy(alpha = 0.05f).compositeOver(background)
+}
 
 /**
  * 主题色弱容器（小面积强调底：命中词块、提示卡）。

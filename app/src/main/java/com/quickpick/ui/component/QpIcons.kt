@@ -63,6 +63,44 @@ object QpIcons {
         moveTo(4f, 19f); lineTo(20f, 19f)
     }.build()
 
+    // ============ 首屏隐私三条（v1.1.15）：替代 ✅ emoji，跟主题色走 ============
+
+    /** 手机轮廓（数据只在设备本地） */
+    val Phone: ImageVector = builder().path(
+        stroke = SolidColor(Color.Black), strokeLineWidth = 1.8f,
+        strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round,
+        pathFillType = PathFillType.NonZero
+    ) {
+        // 机身：竖矩形（当前 path DSL 无圆弧，用直角近似）
+        moveTo(7.5f, 3f); lineTo(16.5f, 3f); lineTo(16.5f, 21f); lineTo(7.5f, 21f); close()
+        // home 指示条
+        moveTo(10.5f, 18f); lineTo(13.5f, 18f)
+    }.build()
+
+    /** 上传箭头 + 斜杠（不上传到服务器） */
+    val UploadOff: ImageVector = builder().path(
+        stroke = SolidColor(Color.Black), strokeLineWidth = 1.8f,
+        strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round,
+        pathFillType = PathFillType.NonZero
+    ) {
+        moveTo(12f, 15f); lineTo(12f, 6.5f)
+        moveTo(9f, 9.5f); lineTo(12f, 6.5f); lineTo(15f, 9.5f)
+        moveTo(5f, 19f); lineTo(19f, 19f)
+        // 禁止斜杠：左上一个点、右下收尾
+        moveTo(4.5f, 4f); lineTo(19.5f, 20f)
+    }.build()
+
+    /** 盾牌 + 对勾（不收集隐私） */
+    val ShieldCheck: ImageVector = builder().path(
+        stroke = SolidColor(Color.Black), strokeLineWidth = 1.8f,
+        strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round,
+        pathFillType = PathFillType.NonZero
+    ) {
+        moveTo(12f, 3f); lineTo(19f, 6f); lineTo(19f, 12.5f); lineTo(12f, 20.5f)
+        lineTo(5f, 12.5f); lineTo(5f, 6f); close()
+        moveTo(8.8f, 11.9f); lineTo(11.2f, 14.3f); lineTo(15.4f, 9.7f)
+    }.build()
+
     /** 文档轮廓（本地文件） */
     val FileDoc: ImageVector = builder().path(
         stroke = SolidColor(Color.Black), strokeLineWidth = 1.8f,
