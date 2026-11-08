@@ -31,7 +31,8 @@ import org.robolectric.annotation.GraphicsMode
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [35])
+// 拉长屏：LazyColumn 屏幕外项不组合，三张卡必须一屏装下才能数到 3 个图标
+@Config(sdk = [35], qualifiers = "w360dp-h2200dp")
 class RuleListClickTest {
 
     @get:Rule
@@ -54,6 +55,15 @@ class RuleListClickTest {
                     onAddRule = {}, onEditRule = {}, onExportRule = {}, onOpenAi = {}
                 )
             }
+        }
+        // 规则列表来自 Room Flow（stateIn 初值 emptyList，首帧必是空），
+        // waitForIdle 只等组合/布局空闲、不等数据库回调 —— CI 上抢到「数据未到」就红。
+        // 改成等条件成立（v1.1.13 CI 偶发失败的根因），再断言。
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodes(hasContentDescription("查看规则 JSON"))
+                .fetchSemanticsNodes().size == 3 &&
+                composeRule.onAllNodes(hasContentDescription("删除规则"))
+                    .fetchSemanticsNodes().size == 3
         }
         composeRule.waitForIdle()
         val jsonIcons = composeRule.onAllNodes(hasContentDescription("查看规则 JSON"))
