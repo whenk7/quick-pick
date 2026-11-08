@@ -106,17 +106,46 @@ UI：v1.1.0 起 M3 全面迁移到 miuix 0.9.4（ui+blur），app/src 零 materi
 
 ## 当前进度
 
-- ✅ v1.0.0 已发布（tag `v1.0.0`，GitHub Release 发 APK，2026-10-16；R1–R5 档案在 `.superpowers/sdd/00-master/`）
-- ✅ v1.1.0 miuix 迁移已发布（2026-10-22，tag `v1.1.0`，Task 1–10 + 每 task 评审 clean；ledger 在 `.superpowers/sdd/2026-10-21-miuix-migration/`）
+### 版本号体系（2026-11-08 重置，重要）
+
+旧编号一路碎到 v1.1.15（versionCode 17），2026-11-08 用户裁决**重开**：
+删掉 14 个历史 Release 与 tag，只留最初两个，新包接着往上走。
+
+| 现存 tag | versionCode | 说明 |
+|---|---|---|
+| `v1.0.0` | 1 | 保留（2026-10-16） |
+| `v1.1.0` | 2 | 保留（miuix 迁移，2026-10-22） |
+| `v1.1.1` | 3 | **当前**，内容 = 原 v1.1.15 |
+
+- **代价**：versionCode 从 17 降到 3，装过旧包的设备必须先卸载（系统不接受降级覆盖）。
+  `allowBackup=false`，卸载丢记录/规则/别名 —— 当前无外部用户，已接受。
+- **下文「历史批次」用旧编号**，与现存 tag 不构成对应关系，只作改动索引；旧 tag 指针已删，
+  对应提交仍在 `main` 历史里。
+- tag 与 `versionName` 必须一致，`versionCode` 每次发布 +1。
+
+### v1.1.1（code 3，= 原 v1.1.15 全部内容）
+
+- **卡片底与页面同色**（Monet 板看不出卡片）：miuix 的 `surfaceContainer`/`surfaceVariant`
+  与 `background` 完全同色（浅深两套都是），`surfaceContainerHigh` 深色也同色，换令牌无效；
+  改为 `Color.kt` 令牌取值时按感知亮度差兜底（< 0.025 时朝 `onBackground` 混 5%）。
+  内置板行为零变化（surface 差 0.0314 / 深色 0.1412）。
+- 空态补「扫描范围」排查引导（规则 → 范围 → 本来就没有，三级）
+- 首屏隐私三条对不齐（原是一个 `Text` 里 `\n` 拼三行 + 居中）→ 真行结构 + 自绘矢量图标
+
+### 历史批次（旧编号，仅作索引）
+
+- ✅ v1.0.0（旧 code 1，2026-10-16）：首发，GitHub Release 发 APK；R1–R5 档案在 `.superpowers/sdd/00-master/`
+- ✅ v1.1.0（旧 code 2，2026-10-22）：miuix 迁移，Task 1–10 + 每 task 评审 clean；ledger 在 `.superpowers/sdd/2026-10-21-miuix-migration/`
 - ✅ 全分支终审（opus）：0 Critical / 2 Important / 7 Minor，Review Focus 5 项全过。Important 均为跨层缺陷：老记录 sms_thread_id 不随重扫回填（升级用户「查看短信」隐形）、TokenChip 命中态暗色下不可读
-- ✅ v1.1.1 修复发布（versionCode 3，两处 Important）
-- ✅ v1.1.2（versionCode 4）：引擎 E1（suffix 未命中判 null）+ 无单号重复/催取归并 + 主题系统重做（双引擎/主题页/玻璃调参/豆绿清洗）+ JVM 测试基建（45 例 + Roborazzi 渲染审查）
-- ✅ v1.1.3（versionCode 5）：设置页点击闪退修复（miuix 弹层缺 NavigationEventDispatcherOwner，主题根部 provide）+ 不混淆裁决（-dontobfuscate，3.19MB→3.70MB 换可读栈）
-- ✅ v1.1.4（versionCode 6）：预置规则极简重置（顺丰/京东只留取件码+品牌，preset_v3 覆盖升级）+ 规则工坊（规则页横排三按钮：导入弹窗粘贴/文件双通道、导出复制/存文件、AI 生成页重写——短信样本审查+手动补齐+提示词一键复制+直接粘贴入库）+ 设置页规则相关入口移除
-- ✅ v1.1.5（versionCode 7）：规则编辑/删除/新增改 Snackbar 轻提示（5s 可关，不弹窗）；下拉重扫移除规则不匹配的未取件记录（已取件历史保留置灰）；主页双击返回退出（2s 窗口）；已取件卡片紧凑单行化；规则编辑器字段裁到 名称/取件码/地址/品牌（发件方/单号/电话移除——端口常变不可靠、无用字段）；预置 preset_v4 清 senderPattern；跳短信三级兜底（会话 URI → 默认短信应用 → 温和提示，MIUI 不认会话 URI 的坑）
-- ✅ v1.1.6（versionCode 8）：「查看短信」改应用内原文弹窗（发件人/时间/正文/复制全文，替代跳系统短信应用）；Room v3 加 sms_sender 列（老记录 NULL，重扫回填）；预置规则自洽测试（从 sampleSms 必能提出取件码）
-- ✅ v1.1.7（versionCode 9，feat/v1.1.7）：反馈批次+沉浸模式。spec `docs/superpowers/specs/2026-10-23-v1.1.7-feedback-batch.md`，plan 同名 plans/。要点：删光规则重扫清空未取件；弹窗返回语义（可关=返回关/裁决=吞返回堵点外部，miuix OverlayDialog 不消费返回键故自拦）；Snackbar 新顶旧（miuix host 多条并存模型 → 自管理 CoalescingSnackbarHost）；卡片三行无展开无复制（单击无功能/长按原文/左滑已取件 SwipeToReveal 35% 阈值）；规则名纯记忆化，卡片标题 fallback「快递」；全局地址簿（DataStore，显示层替换）；主题砍引擎（动态取色开关+种子色网格+miuix 默认，seedColor 可空化，dynamicColor 默认改 false）；首页副标题「N 件待取 · 近三月」；规则页四按钮（自绘 QpIcons）；导入弹窗右侧竖排本地文件；沉浸模式（长按底栏快递，DampedDrag 钩子实现长按——pointerInput 旁观会掐死点击；onDrag(Zero) 按下即发）
-- ✅ v1.1.8（versionCode 10，feat/v1.1.8）：验收修复批——子页返回丢 tab 真根因（currentTab remember→rememberSaveable，NavHost 前进销毁主页组合）；卡片圆圈两卡统一 48dp 右缘对齐+再压缩；Snackbar 去掉 96dp 偏移贴玻璃栏上方；扫描窗口调小即删窗口外未取件（已取件保留，推翻 v1.1.0 不回收旧裁决）；原文弹窗加「删除这条记录」（危险色，删记录+短信加忽略名单 ignored_sms_ids 防重扫复活）。终审修复：归并覆盖会顶掉旧 smsId 导致删除后重扫复活 → Room v4 加 merged_sms_ids 列累积，删除时全忽略。裁决：单条删除免二次确认（延续 v1.1.5 删规则免确认惯例；无恢复入口为已接受代价）
+- ✅ v1.1.1（旧 code 3）：两处 Important 修复
+- ✅ v1.1.2（旧 code 4）：引擎 E1（suffix 未命中判 null）+ 无单号重复/催取归并 + 主题系统重做（双引擎/主题页/玻璃调参/豆绿清洗）+ JVM 测试基建（45 例 + Roborazzi 渲染审查）
+- ✅ v1.1.3（旧 code 5）：设置页点击闪退修复（miuix 弹层缺 NavigationEventDispatcherOwner，主题根部 provide）+ 不混淆裁决（-dontobfuscate，3.19MB→3.70MB 换可读栈）
+- ✅ v1.1.4（旧 code 6）：预置规则极简重置（顺丰/京东只留取件码+品牌，preset_v3 覆盖升级）+ 规则工坊（规则页横排三按钮：导入弹窗粘贴/文件双通道、导出复制/存文件、AI 生成页重写——短信样本审查+手动补齐+提示词一键复制+直接粘贴入库）+ 设置页规则相关入口移除
+- ✅ v1.1.5（旧 code 7）：规则编辑/删除/新增改 Snackbar 轻提示（5s 可关，不弹窗）；下拉重扫移除规则不匹配的未取件记录（已取件历史保留置灰）；主页双击返回退出（2s 窗口）；已取件卡片紧凑单行化；规则编辑器字段裁到 名称/取件码/地址/品牌（发件方/单号/电话移除——端口常变不可靠、无用字段）；预置 preset_v4 清 senderPattern；跳短信三级兜底（会话 URI → 默认短信应用 → 温和提示，MIUI 不认会话 URI 的坑）
+- ✅ v1.1.6（旧 code 8）：「查看短信」改应用内原文弹窗（发件人/时间/正文/复制全文，替代跳系统短信应用）；Room v3 加 sms_sender 列（老记录 NULL，重扫回填）；预置规则自洽测试（从 sampleSms 必能提出取件码）
+- ✅ v1.1.7（旧 code 9）：反馈批次+沉浸模式。spec `docs/superpowers/specs/2026-10-23-v1.1.7-feedback-batch.md`，plan 同名 plans/。要点：删光规则重扫清空未取件；弹窗返回语义（可关=返回关/裁决=吞返回堵点外部，miuix OverlayDialog 不消费返回键故自拦）；Snackbar 新顶旧（miuix host 多条并存模型 → 自管理 CoalescingSnackbarHost）；卡片三行无展开无复制（单击无功能/长按原文/左滑已取件 SwipeToReveal 35% 阈值）；规则名纯记忆化，卡片标题 fallback「快递」；全局地址簿（DataStore，显示层替换）；主题砍引擎（动态取色开关+种子色网格+miuix 默认，seedColor 可空化，dynamicColor 默认改 false）；首页副标题「N 件待取 · 近三月」；规则页四按钮（自绘 QpIcons）；导入弹窗右侧竖排本地文件；沉浸模式（长按底栏快递，DampedDrag 钩子实现长按——pointerInput 旁观会掐死点击；onDrag(Zero) 按下即发）
+- ✅ v1.1.8（旧 code 10）：验收修复批——子页返回丢 tab 真根因（currentTab remember→rememberSaveable，NavHost 前进销毁主页组合）；卡片圆圈两卡统一 48dp 右缘对齐+再压缩；Snackbar 去掉 96dp 偏移贴玻璃栏上方；扫描窗口调小即删窗口外未取件（已取件保留，推翻 v1.1.0 不回收旧裁决）；原文弹窗加「删除这条记录」（危险色，删记录+短信加忽略名单 ignored_sms_ids 防重扫复活）。终审修复：归并覆盖会顶掉旧 smsId 导致删除后重扫复活 → Room v4 加 merged_sms_ids 列累积，删除时全忽略。裁决：单条删除免二次确认（延续 v1.1.5 删规则免确认惯例；无恢复入口为已接受代价）
+- ✅ v1.1.9–v1.1.15（旧 code 11–17）：空态刷新入口、规则变更自动重扫、移除内置预置规则、AI 页重做、编辑器锚点修复、下拉刷新被吞、换柜覆盖丢已取件状态等（旧 tag 已删，明细见这些提交的 commit message）
 - ⬜ 真机验收（清单见下一步）
 
 ## 执行模式（已和用户商定）
@@ -124,10 +153,16 @@ UI：v1.1.0 起 M3 全面迁移到 miuix 0.9.4（ui+blur），app/src 零 materi
 - **主会话（强模型）当总控**：派活、审 diff、排障、把每轮出口标准
 - **执行 agent 用 sonnet 档**（档级映射随模型配置调整）：按分册建文件，照抄计划代码，不自由发挥
 - **评审分层**：转录轮（实现者报零偏差+构建绿）可跳独立评审，复杂轮/集成轮保留，终审用顶格模型——2026-10-16 实测：终审抓到 2 个 Critical 跨层缺陷，轮级评审的价值在确认不在发现
-- **构建环境已装好**：JDK 17.0.20 构建 + JDK 21.0.12 单测（都在 /home/wen/dev/jdk）+ Gradle wrapper 9.8.1 + SDK 37（/home/wen/Android/Sdk，注意平台包名是 android-37.0 不是 android-37），local.properties 已配，`./gradlew` 可用；本地无 KEYSTORE_FILE 环境变量时 assembleRelease 产未签名包（正常，签名包由 CI 打）
+- **构建环境（2026-11-08 起本地不建）**：手机 proot 跑不了 AGP 构建，本地**不装** JDK/SDK/Gradle。
+  编译唯一途径是 GitHub runner（见「编译验证一律交给 GitHub」）。历史上曾有 Windows 本机装
+  JDK 17.0.20 构建 + JDK 21.0.12 单测 + SDK 37（平台包名 `android-37.0`）的环境，那份记录已作废。
 
 ## 下一步
 
-1. GitHub Release 下 `quickpick-v1.1.2.apk` 覆盖装真机（与 v1.0.0 同 CI 签名，无缝升级）。**先不清数据**：验 Room v1→v2 迁移（旧记录完好）+ 预置规则 onCreate 自动升级。仅当机器跑过 10-21 中间 dev build 才需清一次数据（错值品牌锚点 seeded）
-2. 验收清单：明/暗/Monet 三态主题、玻璃底栏（三键导航不遮挡）、发件方过滤、品牌色点、扫描窗口、JSON 弹窗、跳原短信、长按分享、DayGroup 吸顶、弹窗退出动画；**定向两条（验 v1.1.1 修复）**：暗色下开规则编辑器看词块三态可读、下拉重扫后老记录出现「查看短信」
-3. v1.1.2 候选（终审 7 Minor + 语料测试发现 + 迁移延期项）：**F1 预置顺丰锚点「到达」→「已到达」+ preset_v3 升级**（营销短信可误报，语料无顺丰/京东实样故未盲调）、**F2/E2 品牌升格为过滤条件**（退货「取货码」短信与圆通/妈妈驿站锚点不可区分）、编辑器预览回显品牌提取、AI 提示词模板加 senderPattern/brand 字段、markAllPickedUp 三层死链、SettingsScreen:141 过时注释、扫描窗口改动即时生效、spec §8.4 玻璃栏 pill 文案对齐实现、品牌提取无闭合后缀吞正文语义（E1 已修同类问题，品牌字段特化）、BottomNavBar.kt 改名 BottomTab.kt、死代码清理（SmsReader.readAll、SettingsViewModel.rules、Color.Pending）、rememberSaveable tab、编辑器重复词块锚定增强、SCAN_WINDOWS/主题初值提常量、ScanWindowRow a11y、lastJsonRule SideEffect 化、JsonPreviewDialog 加分享按钮、KSP 对齐 Kotlin、exportSchema 入库、`--warning-mode all` 定位 deprecation
+1. **装 v1.1.1（code 3）**：`quickpick-v1.1.1.apk`。**必须先卸载旧版**——versionCode 从 17 降到 3，
+   系统不接受降级覆盖。卸载会清数据（`allowBackup=false`），重装后重扫短信、重配规则即可。
+2. 验收清单：明/暗/Monet 三态主题、玻璃底栏（三键导航不遮挡）、扫描窗口、JSON 弹窗、跳原短信、
+   长按分享、DayGroup 吸顶、弹窗退出动画；**本次重点三条**：①Monet 板下取件码卡片能否看出边界
+   （v1.1.1 修）②空态三句文案排版 ③首屏三个矢量图标对齐与配色跟随主题
+3. 待办候选：`recordRoborazziDebug` 加进 CI 出渲染图、首页扫描首帧触发缺口（已裁决不改）、
+   `CardDefaults` 其余引用处观察
