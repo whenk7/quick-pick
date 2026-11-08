@@ -22,11 +22,13 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.quickpick.ui.component.InlineTextButton
+import com.quickpick.ui.component.QpIcons
 import com.quickpick.ui.theme.*
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -77,15 +79,46 @@ fun OnboardingScreen(onPermissionGranted: () -> Unit) {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "我们需要读取您的短信，来自动提取快递取件信息。\n\n" +
-                   "✅ 所有数据仅存储在您的设备本地\n" +
-                   "✅ 不上传任何信息到服务器\n" +
-                   "✅ 不收集任何隐私数据",
+            text = "我们需要读取您的短信，来自动提取快递取件信息。",
             style = MiuixTheme.textStyles.body1,
             color = TextSecondary,
             textAlign = TextAlign.Center,
             lineHeight = MiuixTheme.textStyles.body1.lineHeight
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 隐私三条（v1.1.15）：原先是同一个 Text 里 \n 拼三行 + textAlign.Center，
+        // 各行字数不同 → 每行左缘各退各的，✅ 呈阶梯状。改为真正的行结构：
+        // 外层 Column 撑满宽度锁住左缘，图标与文案分列（emoji 与中文度量不同，混排会错基线）。
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf(
+                QpIcons.Phone to "所有数据仅存储在您的设备本地",
+                QpIcons.UploadOff to "不上传任何信息到服务器",
+                QpIcons.ShieldCheck to "不收集任何隐私数据"
+            ).forEach { (icon, label) ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = Primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = label,
+                        style = MiuixTheme.textStyles.body1,
+                        color = TextSecondary
+                    )
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 

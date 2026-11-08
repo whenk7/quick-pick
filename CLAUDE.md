@@ -88,6 +88,16 @@ UI：v1.1.0 起 M3 全面迁移到 miuix 0.9.4（ui+blur），app/src 零 materi
 - **节奏**：v1.0.0 发布前直接提交 main（无用户，无仪式）；发布后新东西走分支，攒够一波打新 tag
 - **不要** develop/release 分支——那是多人团队的 GitFlow，单人项目只剩负担
 - commit 信息沿用 `feat:/fix:/docs:/chore:` 前缀
+
+### 编译验证一律交给 GitHub（2026-11-08 用户裁决）
+
+- **本地不装 JDK / Android SDK / Gradle**。手机 proot 环境跑不了 AGP 构建，装了也是白占空间。
+- **不要为了验证去推开发分支然后 dispatch workflow**。`release.yml` 只认 `v*` tag，
+  在分支上 dispatch 会撞 `Rename APK` 那步（`GITHUB_REF_NAME` 带斜杠 → mv 目标目录不存在），
+  且 `action-gh-release` 可能拿 ref 名建垃圾 Release。
+- **正确流程**：本地写完 → 开发分支合进 main → 推 main（需要出包/验证编译时打新 tag）。
+  编译、单测、lint、打包全由 GitHub runner 干。
+
 - **CI 发版**：推 `v*` tag 触发 `.github/workflows/release.yml` → 签名 APK 自动挂 Release。keystore 在 `~/quickpick-release.jks`（**单密码**，PKCS12 不支持库/key 双密码，keypass 会被静默忽略），4 个 GitHub secrets 已配。2026-10-16 首跑踩坑记录：setup-android action 卡协议（用 runner 预装 SDK）、sdkmanager 不在 PATH（走 `$ANDROID_HOME/cmdline-tools` 全路径）、GITHUB_TOKEN 默认只读（workflow 需 `permissions: contents: write`）
 
 ## 交流风格
